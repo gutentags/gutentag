@@ -1,0 +1,19 @@
+{
+  "name": "gutentag",
+  "version": "0.0.0",
+  "description": "HTML tag definition modules",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kriskowal/gutentag.git"
+  },
+  "keywords": [
+    "html",
+    "tag",
+    "component"
+  ],
+  "author": "Kris Kowal <kris@cixar.com>",
+  "bugs": {
+    "url": "https://github.com/kriskowal/gutentag/issues"
+  },
+  "homepage": "https://github.com/kriskowal/gutentag"
+}
