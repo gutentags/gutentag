@@ -91,6 +91,10 @@ function TextNode(document, text) {
     this.actualNode = document.actualDocument.createTextNode(text);
 }
 
+TextNode.prototype = Object.create(Node.prototype);
+TextNode.prototype.constructor = TextNode;
+TextNode.prototype.nodeType = 3;
+
 Object.defineProperty(TextNode.prototype, "data", {
     set: function (data) {
         this.actualNode.data = data;
@@ -99,10 +103,6 @@ Object.defineProperty(TextNode.prototype, "data", {
         return this.actualNode.data;
     }
 });
-
-TextNode.prototype = Object.create(Node.prototype);
-TextNode.prototype.constructor = TextNode;
-TextNode.prototype.nodeType = 3;
 
 // if parentNode is null, the body is extracted
 // if parentNode is non-null, the body is inserted

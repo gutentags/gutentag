@@ -19,10 +19,21 @@
   "devDependencies": {
     "jasminum": "^2.0.5"
   },
+  "translators": {
+    "html": "./translate-html",
+    "xml": "./translate-xml"
+  },
+  "redirects": {
+    "text.html": "./text.js",
+    "repeat.html": "./repeat.js",
+    "reveal.html": "./reveal.js"
+  },
   "scripts": {
     "test": "jasminum test"
   },
   "dependencies": {
-    "domenic": "0.0.0"
+    "collections": "^2.0.1",
+    "domenic": "0.0.0",
+    "mr": "^2.0.4"
   }
 }
