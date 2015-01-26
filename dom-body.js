@@ -174,6 +174,16 @@ Object.defineProperty(Body.prototype, "innerHTML", {
         } else {
             return this.actualBody.innerHTML;
         }
+    },
+    set: function (html) {
+        if (this.parentNode) {
+            this.extract();
+            this.actualBody.innerHTML = html;
+            this.inject();
+            return html;
+        } else {
+            this.actualBody.innerHTML = html;
+        }
     }
 });
 
