@@ -154,11 +154,7 @@ function translateSegment(node, program, template, name, displayName) {
             translateElement(child, program, template, name, displayName);
         } else if (child.nodeType === 3 /*domenic.Element.TEXT_NODE*/) {
             var text = child.nodeValue;
-            if (inline[node.tagName]) {
-                text = text.replace(/[\s\n]+/g, " ");
-            } else {
-                text = text.trim();
-            }
+            text = text.replace(/[\s\n]+/g, " ");
             if (text) {
                 unused = false;
                 program.add("parent.appendChild(document.createTextNode(" + JSON.stringify(text) + "));\n");
