@@ -15,5 +15,14 @@
   "bugs": {
     "url": "https://github.com/kriskowal/gutentag/issues"
   },
-  "homepage": "https://github.com/kriskowal/gutentag"
+  "homepage": "https://github.com/kriskowal/gutentag",
+  "devDependencies": {
+    "jasminum": "^2.0.5"
+  },
+  "scripts": {
+    "test": "jasminum test"
+  },
+  "dependencies": {
+    "domenic": "0.0.0"
+  }
 }
