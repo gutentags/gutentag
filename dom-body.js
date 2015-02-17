@@ -58,6 +58,22 @@ Node.prototype.removeChild = function removeChild(childNode) {
     BaseNode.prototype.removeChild.call(this, childNode);
 };
 
+Node.prototype.setAttribute = function setAttribute(key, value) {
+    this.actualNode.setAttribute(key, value);
+};
+
+Node.prototype.getAttribute = function getAttribute(key) {
+    this.actualNode.getAttribute(key);
+};
+
+Node.prototype.hasAttribute = function hasAttribute(key) {
+    this.actualNode.hasAttribute(key);
+};
+
+Node.prototype.removeAttribute = function removeAttribute(key) {
+    this.actualNode.removeAttribute(key);
+};
+
 Node.prototype.inject = function injectNode() { };
 
 Node.prototype.extract = function extractNode() { };

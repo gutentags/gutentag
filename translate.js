@@ -4,6 +4,7 @@
 // this.scope: the scope for this component, in which its child components exist
 // this.scope.argument == scope, the scope in which to instantiate the parameter component
 
+var Q = require("q");
 var domenic = require("domenic");
 var parser = new domenic.DOMParser();
 
@@ -28,11 +29,19 @@ module.exports = function translate(module, type) {
     var template = new Template();
     program.add('"use strict";\n');
     module.dependencies = [];
+    module.neededTags = {};
     analyzeDocument(document, program, template, module);
-    translateDocument(document, program, template, module, "THIS", displayName);
-    module.text = program.digest();
-    console.log(module.text);
-    return module.text;
+    return Q.all(Object.keys(module.neededTags).map(function (name) {
+        var href = module.neededTags[name];
+        return module.require.load(href)
+        .then(function () {
+            template.getTag(name).module = module.require.lookup(href);
+        });
+    })).then(function () {
+        translateDocument(document, program, template, module, "THIS", displayName);
+        module.text = program.digest();
+        console.log(module.text);
+    });
 };
 
 // TODO We need to use this data, but whether space can be trimmed has less to
@@ -42,12 +51,6 @@ module.exports = function translate(module, type) {
 // Custom tags need to be able to express whether and how internal and
 // surrounding space should be handled.
 // CSS lies.
-var inline = {
-    A: 1, ABBR: 1, ACRONYM: 1, B: 1, BDO: 1, BIG: 1, BR: 1, BUTTON: 1, CITE: 1,
-    CODE: 1, DFN: 1, EM: 1, I: 1, IMG: 1, INPUT: 1, KBD: 1, LABEL: 1, MAP: 1,
-    OBJECT: 1, Q: 1, SAMP: 1, SCRIPT: 1, SELECT: 1, SMALL: 1, SPAN: 1,
-    STRONG: 1, SUB: 1, SUP: 1, TEXTAREA: 1, TT: 1, VAR: 1
-};
 
 function analyzeDocument(document, program, template, module) {
     var child = document.documentElement.firstChild;
@@ -81,13 +84,18 @@ function analyzeHead(head, program, template, module) {
                         var as = child.getAttribute("as").toUpperCase();
                         // TODO validate identifier
                         program.add("var $" + as + " = require" + "(" + JSON.stringify(href) + ");\n");
+                        module.neededTags[as] = href;
                         module.dependencies.push(href);
                         template.addTag(as, {type: "external", id: href});
                     }
                     // ...
                 } else if (child.tagName.toLowerCase() === "meta") {
-                    if (child.getAttribute("arguments")) {
-                        template.takesArguments = true;
+                    if (child.hasAttribute("accepts")) {
+                        module.accepts = true;
+                        if (child.hasAttribute("as")) {
+                            var as = child.getAttribute("as").toUpperCase();
+                            template.addTag(as, {type: "argument", module: {}});
+                        }
                     }
                     // ...
                 }
@@ -112,32 +120,37 @@ function translateDocument(document, program, template, module, name, displayNam
 }
 
 function translateBody(body, program, template, name, displayName) {
-    program.add("var $" + name + " = function " + displayName + "(body, argumentScope, argumentTemplate, attributes) {\n");
+    program.add("var $" + name + " = function " + displayName + "(body, argumentScope, $ARGUMENT, attributes) {\n");
     program.indent();
+
+    // Establish the component and its scope
     program.add("var document = body.ownerDocument;\n");
     program.add("var scope = this.scope = argumentScope.root.nest(this);\n");
-    program.add("scope.argument = argumentScope;\n");
+    program.add("scope.argumentScope = argumentScope;\n");
+    program.add("scope.owner = this;\n");
     program.add("scope.value = this;\n");
-    if (template.takesArguments) {
-        program.add("scope.argumentComponents = {};\n");
-        program.add("new argumentScope.ArgumentComponent(scope);\n");
-    }
-    if (body) {
-        translateSegment(body, program, template, name, displayName);
-    }
+
+    // Build out the body
+    translateSegment(body, program, template, name, displayName);
+
+    // Call super constructor
     if (template.extends) {
         program.add("$SUPER.apply(this, arguments);\n");
     }
+
     program.exdent();
     program.add("};\n");
+    // Trailing inheritance declarations
     if (template.extends) {
         program.add("$THIS.prototype = Object.create($SUPER.prototype);\n");
+        program.add("$THIS.prototype.constructor = $THIS;\n");
     }
 }
 
 function translateArgument(node, program, template, name, displayName) {
-    program.add("var $" + name + " = function " + displayName + "(body, scope, fallback, attributes) {\n");
+    program.add("var $" + name + " = function " + displayName + "(body, scope) {\n");
     program.indent();
+    program.add("this.scope = scope;\n");
     program.add("var document = body.ownerDocument;\n");
     translateSegment(node, program, template, name, displayName);
     program.exdent();
@@ -145,7 +158,7 @@ function translateArgument(node, program, template, name, displayName) {
 }
 
 function translateSegment(node, program, template, name, displayName) {
-    var header = program.add("var parent = body, parents = [], node, component;\n");
+    var header = program.add("var parent = body, parents = [], node, component, componentScope;\n");
     var unused = true;
     var child = node.firstChild;
     while (child) {
@@ -169,20 +182,32 @@ function translateSegment(node, program, template, name, displayName) {
 
 function translateElement(node, program, template, name, displayName) {
     var id = node.getAttribute("id");
-    var tagName = node.tagName.toLowerCase();
-    if (template.hasTag(tagName) || tagName === "this") {
+    var tagName = node.tagName.toUpperCase();
+    var argumentTag = template.getTag(tagName);
+
+    if (argumentTag) {
         program.add("node = document.createBody();\n");
-        program.add("parent.appendChild(node);\n");
+    } else {
+        program.add("node = document.createElement(" + JSON.stringify(node.tagName) + ");\n");
+    }
+
+    program.add("parent.appendChild(node);\n");
+
+    if (argumentTag) {
         // TODO argument templates, argumentScope
         // template:
         var argumentProgram = new Program();
         var argumentSuffix = "$" + (template.nextArgumentIndex++);
         var argumentName = name + argumentSuffix;
         var argumentDisplayName = displayName + argumentSuffix;
-        translateArgument(node, argumentProgram, template, argumentName, argumentDisplayName);
+        var pass = "null";
+        if (argumentTag.module.accepts) {
+            translateArgument(node, argumentProgram, template, argumentName, argumentDisplayName);
+            pass = '$' + argumentName;
+        }
         program.addProgram(argumentProgram);
-        // TODO append to master program, give a name
-        // attributes:
+
+        // Capture attributes
         var attys = {};
         for (var attribute, key, value, index = 0, attributes = node.attributes, length = attributes.length; index < length; index++) {
             attribute = attributes.item(index);
@@ -193,19 +218,44 @@ function translateElement(node, program, template, name, displayName) {
             }
             attys[key] = value;
         }
+
+        // Pass the scope back to the caller
+        if (argumentTag.type === "argument") {
+            program.add("componentScope = scope.argumentScope;\n");
+        } else {
+            program.add("componentScope = scope;\n");
+        }
+
         // TODO determine and create an appropriate argument scope
-        program.add("component = new $" + tagName.toUpperCase() + "(node, scope, $" + argumentName + ", " + JSON.stringify(attys) + ");\n");
-        if (id) {
-            // TODO optimize for valid identifiers
-            program.add("scope.value[" + JSON.stringify(id) + "] = component;\n");
-        }
+        program.add(
+            "component = new $" + tagName + "(" +
+                "node, " +
+                "componentScope, " +
+                pass + ", " +
+                JSON.stringify(attys) +
+            ");\n"
+        );
     } else {
-        program.add("node = document.createElement(" + JSON.stringify(node.tagName) + ");\n");
-        program.add("parent.appendChild(node);\n");
-        if (id) {
-            // TODO optimize for valid identifiers
-            program.add("scope.value[" + JSON.stringify(id) + "] = node;\n");
-        }
+        program.add("component = node;\n");
+    }
+
+    // Introduce new component or node to its owner.
+    program.add("if (scope.owner.addChild) {\n");
+    program.indent();
+    program.add("scope.owner.addChild(component, " + JSON.stringify(id) + ", scope);\n");
+    program.exdent();
+    program.add("}\n");
+    // Perhaps sensible default behavior if the owner does not implement
+    // addChild. TODO review
+    if (id) {
+        program.add("else {\n");
+        program.indent();
+        program.add("scope.owner[" + JSON.stringify(id) + "] = component;\n");
+        program.exdent();
+        program.add("}\n");
+    }
+
+    if (!argumentTag) {
         for (var attribute, key, value, index = 0, attributes = node.attributes, length = attributes.length; index < length; index++) {
             attribute = attributes.item(index);
             key = attribute.nodeName;
@@ -230,11 +280,7 @@ function translateFragment(node, program, template, name, displayName) {
             program.add("node = parent; parent = parents[parents.length - 1]; parents.length--;\n");
         } else if (child.nodeType === 3 /*domenic.Element.TEXT_NODE*/) {
             text = child.nodeValue;
-            if (inline[node.tagName]) {
-                text = text.replace(/[\s\n]+/g, " ");
-            } else {
-                text = text.trim();
-            }
+            text = text.replace(/[\s\n]+/g, " ");
             if (text) {
                 program.add("node.appendChild(document.createTextNode(" + JSON.stringify(text) + "));\n");
             }
@@ -244,19 +290,21 @@ function translateFragment(node, program, template, name, displayName) {
 }
 
 function Template() {
-    this.tagsIndex = {};
-    this.tagsArray = [];
+    this.tags = {};
     this.nextArgumentIndex = 0;
 }
 
 Template.prototype.addTag = function (name, tag) {
     tag.name = name;
-    this.tagsIndex[name.toUpperCase()] = tag;
-    this.tagsArray.push(tag);
+    this.tags[name] = tag;
 };
 
 Template.prototype.hasTag = function (name) {
-    return Object.prototype.hasOwnProperty.call(this.tagsIndex, name.toUpperCase());
+    return Object.prototype.hasOwnProperty.call(this.tags, name);
+};
+
+Template.prototype.getTag = function (name) {
+    return this.tags[name];
 };
 
 function Program() {

@@ -38,12 +38,15 @@ Repetition.prototype.handleValuesRangeChange = function (plus, minus, index) {
     var nextSibling = nextIteration && nextIteration.body;
 
     this.iterations.swap(index, minus.length, plus.map(function (value, offset) {
-        var childNode = document.createBody();
-        var iteration = new this.Iteration(childNode, scope);
+        var iterationNode = document.createBody();
+        var iteration = Object.create(this.Iteration.prototype);
+        var iterationScope = scope.nest();
+        iterationScope.value = iteration;
         iteration.value = value;
         iteration.index = index + offset;
-        iteration.body = childNode;
-        body.insertBefore(childNode, nextSibling);
+        iteration.body = iterationNode;
+        this.Iteration.call(iteration, iterationNode, iterationScope);
+        body.insertBefore(iterationNode, nextSibling);
         return iteration;
     }, this));
 

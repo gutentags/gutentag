@@ -2,7 +2,7 @@
 
 var translate = require("./translate");
 
-module.exports = function translateHtml(text, module) {
+module.exports = function translateHtml(module) {
     return translate(module, "application/xml");
 };
 
