@@ -3,12 +3,12 @@
 var ObservableObject = require("collections/observable-object");
 
 module.exports = Reveal;
-function Reveal(body, scope, Template) {
+function Reveal(body, scope, argument) {
     this.value = false;
     ObservableObject.observePropertyChange(this, "value", this);
     this.body = body;
     this.childBody = body.ownerDocument.createBody();
-    this.child = new Template(this.childBody, scope);
+    this.child = new argument.constructor(this.childBody, scope);
 }
 
 Reveal.prototype.handleValuePropertyChange = function (value) {

@@ -90,11 +90,20 @@ function analyzeHead(head, program, template, module) {
                     }
                     // ...
                 } else if (child.tagName.toLowerCase() === "meta") {
-                    if (child.hasAttribute("accepts")) {
-                        module.accepts = true;
-                        if (child.hasAttribute("as")) {
-                            var as = child.getAttribute("as").toUpperCase();
-                            template.addTag(as, {type: "argument", module: {}});
+                    if (child.getAttribute("accepts")) {
+                        var accepts = child.getAttribute("accepts");
+                        var parameter = {};
+                        module.parameter = parameter;
+                        if (accepts === ".innerText") {
+                            parameter.innerText = true;
+                        } else if (accepts === ".innerHTML") {
+                            parameter.innerHTML = true;
+                        } else if (accepts === ".constructor") {
+                            parameter.constructor = true;
+                            // TODO accepts as different names
+                            template.addTag("ARGUMENT", {type: "argument", module: {parameter: {}}});
+                        } else {
+                            // TODO fancy argument patterns
                         }
                     }
                     // ...
@@ -120,7 +129,7 @@ function translateDocument(document, program, template, module, name, displayNam
 }
 
 function translateBody(body, program, template, name, displayName) {
-    program.add("var $" + name + " = function " + displayName + "(body, argumentScope, $ARGUMENT, attributes) {\n");
+    program.add("var $" + name + " = function " + displayName + "(body, argumentScope, $ARGUMENT) {\n");
     program.indent();
 
     // Establish the component and its scope
@@ -158,7 +167,7 @@ function translateArgument(node, program, template, name, displayName) {
 }
 
 function translateSegment(node, program, template, name, displayName) {
-    var header = program.add("var parent = body, parents = [], node, component, componentScope;\n");
+    var header = program.add("var parent = body, parents = [], node, component, componentScope, argument;\n");
     var unused = true;
     var child = node.firstChild;
     while (child) {
@@ -193,66 +202,26 @@ function translateElement(node, program, template, name, displayName) {
 
     program.add("parent.appendChild(node);\n");
 
-    if (argumentTag) {
-        // TODO argument templates, argumentScope
-        // template:
-        var argumentProgram = new Program();
-        var argumentSuffix = "$" + (template.nextArgumentIndex++);
-        var argumentName = name + argumentSuffix;
-        var argumentDisplayName = displayName + argumentSuffix;
-        var pass = "null";
-        if (argumentTag.module.accepts) {
-            translateArgument(node, argumentProgram, template, argumentName, argumentDisplayName);
-            pass = '$' + argumentName;
-        }
-        program.addProgram(argumentProgram);
-
-        // Capture attributes
-        var attys = {};
-        for (var attribute, key, value, index = 0, attributes = node.attributes, length = attributes.length; index < length; index++) {
-            attribute = attributes.item(index);
-            key = attribute.nodeName;
-            value = attribute.value || node.nodeValue;
-            if (key === "id") {
-                continue;
-            }
-            attys[key] = value;
-        }
-
-        // Pass the scope back to the caller
-        if (argumentTag.type === "argument") {
-            program.add("componentScope = scope.argumentScope;\n");
-        } else {
-            program.add("componentScope = scope;\n");
-        }
-
-        // TODO determine and create an appropriate argument scope
-        program.add(
-            "component = new $" + tagName + "(" +
-                "node, " +
-                "componentScope, " +
-                pass + ", " +
-                JSON.stringify(attys) +
-            ");\n"
-        );
+    var component;
+    if (argumentTag && argumentTag.module.parameter) {
+        negotiateArgument(node, argumentTag, argumentTag.module.parameter, program, template, name, displayName);
     } else {
-        program.add("component = node;\n");
+        component = program.add("component = node;\n");
     }
 
     // Introduce new component or node to its owner.
-    program.add("if (scope.owner.addChild) {\n");
-    program.indent();
-    program.add("scope.owner.addChild(component, " + JSON.stringify(id) + ", scope);\n");
-    program.exdent();
-    program.add("}\n");
-    // Perhaps sensible default behavior if the owner does not implement
-    // addChild. TODO review
     if (id) {
-        program.add("else {\n");
+        program.add("if (scope.owner.addChild) {\n");
+        program.indent();
+        program.add("scope.owner.addChild(component, " + JSON.stringify(id) + ", scope);\n");
+        program.exdent();
+        program.add("} else {\n");
         program.indent();
         program.add("scope.owner[" + JSON.stringify(id) + "] = component;\n");
         program.exdent();
         program.add("}\n");
+    } else if (component) {
+        program.retract(component);
     }
 
     if (!argumentTag) {
@@ -275,9 +244,9 @@ function translateFragment(node, program, template, name, displayName) {
     while (child) {
         // invariant: node is the parent node
         if (child.nodeType === 1 /*domenic.Element.ELEMENT_NODE*/) {
-            program.add("parents[parents.length] = parent; parent = node;\n");
+            program.push();
             translateElement(child, program, template, name, displayName);
-            program.add("node = parent; parent = parents[parents.length - 1]; parents.length--;\n");
+            program.pop();
         } else if (child.nodeType === 3 /*domenic.Element.TEXT_NODE*/) {
             text = child.nodeValue;
             text = text.replace(/[\s\n]+/g, " ");
@@ -287,6 +256,33 @@ function translateFragment(node, program, template, name, displayName) {
         }
         child = child.nextSibling;
     }
+}
+
+function negotiateArgument(node, argument, parameter, program, template, name, displayName) {
+    if (parameter.innerText) {
+        program.add("argument = {innerText: " + JSON.stringify(node.innerText) + "};\n");
+    } else if (parameter.innerHTML) {
+        program.add("argument = {innerHTML: " + JSON.stringify(node.innerHTML) + "};\n");
+    } else if (parameter.constructor) {
+        var argumentProgram = new Program();
+        var argumentSuffix = "$" + (template.nextArgumentIndex++);
+        var argumentName = name + argumentSuffix;
+        var argumentDisplayName = displayName + argumentSuffix;
+        translateArgument(node, argumentProgram, template, argumentName, argumentDisplayName);
+        program.addProgram(argumentProgram);
+        program.add("argument = {constructor: $" + argumentName + "};\n");
+    }
+
+    // Pass the scope back to the caller
+    if (argument.type === "argument") {
+        program.add("componentScope = scope.argumentScope;\n");
+        // TODO open up the field for argument as
+        program.add("component = new $ARGUMENT.constructor(node, componentScope, argument);\n");
+    } else {
+        program.add("componentScope = scope;\n");
+        program.add("component = new $" + node.tagName.toUpperCase() + "(node, componentScope, argument);\n");
+    }
+
 }
 
 function Template() {
@@ -323,6 +319,14 @@ Program.prototype.add = function (line) {
     this.lines.push(line);
     var until = this.lines.length;
     return [index, until];
+};
+
+Program.prototype.push = function () {
+    this.add("parents[parents.length] = parent; parent = node;\n");
+};
+
+Program.prototype.pop = function () {
+    this.add("node = parent; parent = parents[parents.length - 1]; parents.length--;\n");
 };
 
 Program.prototype.retract = function (pair) {

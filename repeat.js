@@ -3,11 +3,11 @@ var ObservableObject = require("collections/observable-object");
 require("collections/observable-array");
 
 module.exports = Repetition;
-function Repetition(body, scope, Iteration) {
+function Repetition(body, scope, argument) {
     this.body = body;
     this.scope = scope;
     this.iterations = [];
-    this.Iteration = Iteration;
+    this.Iteration = argument.constructor;
     this._values = [];
     this._values.observeRangeChange(this, "values");
 }
