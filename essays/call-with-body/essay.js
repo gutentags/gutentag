@@ -1,7 +1,7 @@
 "use strict";
 
 module.exports = Essay;
-function Essay(body, scope) {
+function Essay() {
 }
 
 Essay.prototype.addChild = function (child, id, scope) {

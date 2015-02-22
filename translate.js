@@ -79,9 +79,18 @@ function analyzeHead(head, program, template, module) {
                         module.dependencies.push(href);
                         template.extends = true;
                         template.addTag("SUPER", {type: "super"});
+                    } else if (rel === "exports") {
+                        var href = child.getAttribute("href");
+                        template.exports = href;
+                        module.dependencies.push(href);
                     } else if (rel === "tag") {
                         var href = child.getAttribute("href");
-                        var as = child.getAttribute("as").toUpperCase();
+                        var as = child.getAttribute("as");
+                        if (!as) {
+                            as = /([^\/]+)\.html$/.exec(href);
+                            as = as[1];
+                        }
+                        as = as.toUpperCase();
                         // TODO validate identifier
                         program.add("var $" + as + " = require" + "(" + JSON.stringify(href) + ");\n");
                         module.neededTags[as] = href;
@@ -98,8 +107,8 @@ function analyzeHead(head, program, template, module) {
                             parameter.innerText = true;
                         } else if (accepts === ".innerHTML") {
                             parameter.innerHTML = true;
-                        } else if (accepts === ".constructor") {
-                            parameter.constructor = true;
+                        } else if (accepts === ".component") {
+                            parameter.component = true;
                             // TODO accepts as different names
                             template.addTag("ARGUMENT", {type: "argument", module: {parameter: {}}});
                         } else {
@@ -115,16 +124,20 @@ function analyzeHead(head, program, template, module) {
 }
 
 function translateDocument(document, program, template, module, name, displayName) {
-    var child = document.documentElement.firstChild;
-    while (child) {
-        if (child.nodeType === 1 /* ELEMENT_NODE */) {
-            if (child.tagName.toLowerCase() === "body") {
-                translateBody(child, program, template, name, displayName);
+    if (template.exports) {
+        program.add("module.exports = (require)(" + JSON.stringify(template.exports) + ");\n");
+    } else {
+        var child = document.documentElement.firstChild;
+        while (child) {
+            if (child.nodeType === 1 /* ELEMENT_NODE */) {
+                if (child.tagName.toLowerCase() === "body") {
+                    translateBody(child, program, template, name, displayName);
+                }
             }
+            child = child.nextSibling;
         }
-        child = child.nextSibling;
+        program.add("module.exports = $THIS;\n");
     }
-    program.add("module.exports = $THIS;\n");
     return program.digest();
 }
 
@@ -157,7 +170,7 @@ function translateBody(body, program, template, name, displayName) {
 }
 
 function translateArgument(node, program, template, name, displayName) {
-    program.add("var $" + name + " = function " + displayName + "(body, scope) {\n");
+    program.add("var $" + name + " = function " + displayName + "(body, scope, $ARGUMENT) {\n");
     program.indent();
     program.add("this.scope = scope;\n");
     program.add("var document = body.ownerDocument;\n");
@@ -259,25 +272,26 @@ function translateFragment(node, program, template, name, displayName) {
 }
 
 function negotiateArgument(node, argument, parameter, program, template, name, displayName) {
+    program.add("argument = {};\n");
     if (parameter.innerText) {
-        program.add("argument = {innerText: " + JSON.stringify(node.innerText) + "};\n");
+        program.add("argument.innerText = " + JSON.stringify(node.innerText) + ";\n");
     } else if (parameter.innerHTML) {
-        program.add("argument = {innerHTML: " + JSON.stringify(node.innerHTML) + "};\n");
-    } else if (parameter.constructor) {
+        program.add("argument.innerHTML = " + JSON.stringify(node.innerHTML) + ";\n");
+    } else if (parameter.component) {
         var argumentProgram = new Program();
         var argumentSuffix = "$" + (template.nextArgumentIndex++);
         var argumentName = name + argumentSuffix;
         var argumentDisplayName = displayName + argumentSuffix;
         translateArgument(node, argumentProgram, template, argumentName, argumentDisplayName);
         program.addProgram(argumentProgram);
-        program.add("argument = {constructor: $" + argumentName + "};\n");
+        program.add("argument.component = $" + argumentName + ";\n");
     }
 
     // Pass the scope back to the caller
     if (argument.type === "argument") {
         program.add("componentScope = scope.argumentScope;\n");
         // TODO open up the field for argument as
-        program.add("component = new $ARGUMENT.constructor(node, componentScope, argument);\n");
+        program.add("component = new $ARGUMENT.component(node, componentScope, argument);\n");
     } else {
         program.add("componentScope = scope;\n");
         program.add("component = new $" + node.tagName.toUpperCase() + "(node, componentScope, argument);\n");

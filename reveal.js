@@ -8,7 +8,7 @@ function Reveal(body, scope, argument) {
     ObservableObject.observePropertyChange(this, "value", this);
     this.body = body;
     this.childBody = body.ownerDocument.createBody();
-    this.child = new argument.constructor(this.childBody, scope);
+    this.child = new argument.component(this.childBody, scope);
 }
 
 Reveal.prototype.handleValuePropertyChange = function (value) {

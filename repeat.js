@@ -7,7 +7,7 @@ function Repetition(body, scope, argument) {
     this.body = body;
     this.scope = scope;
     this.iterations = [];
-    this.Iteration = argument.constructor;
+    this.Iteration = argument.component;
     this._values = [];
     this._values.observeRangeChange(this, "values");
 }
