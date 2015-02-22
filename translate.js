@@ -272,11 +272,13 @@ function translateFragment(node, program, template, name, displayName) {
 }
 
 function negotiateArgument(node, argument, parameter, program, template, name, displayName) {
-    program.add("argument = {};\n");
+    program.push();
+
+    program.add("node = document.createElement(\"body\");\n");
     if (parameter.innerText) {
-        program.add("argument.innerText = " + JSON.stringify(node.innerText) + ";\n");
+        program.add("node.innerText = " + JSON.stringify(node.innerText) + ";\n");
     } else if (parameter.innerHTML) {
-        program.add("argument.innerHTML = " + JSON.stringify(node.innerHTML) + ";\n");
+        program.add("node.innerHTML = " + JSON.stringify(node.innerHTML) + ";\n");
     } else if (parameter.component) {
         var argumentProgram = new Program();
         var argumentSuffix = "$" + (template.nextArgumentIndex++);
@@ -284,19 +286,28 @@ function negotiateArgument(node, argument, parameter, program, template, name, d
         var argumentDisplayName = displayName + argumentSuffix;
         translateArgument(node, argumentProgram, template, argumentName, argumentDisplayName);
         program.addProgram(argumentProgram);
-        program.add("argument.component = $" + argumentName + ";\n");
+        program.add("node.component = $" + argumentName + ";\n");
+    } else if (parameter.firstChild) {
+        var at = parameter.firstChild;
+        while (at) {
+            // TODO recurse to build argument tree
+            at = at.nextSibling;
+        }
     }
 
     // Pass the scope back to the caller
     if (argument.type === "argument") {
+        // Instantiate an argument from the template that instantiated this.
         program.add("componentScope = scope.argumentScope;\n");
-        // TODO open up the field for argument as
-        program.add("component = new $ARGUMENT.component(node, componentScope, argument);\n");
-    } else {
+        // TODO open up the field for argument "as"
+        program.add("component = new $ARGUMENT.component(parent, componentScope, node);\n");
+    } else if (argument.type === "external") {
+        // Pass a chunk of our own template to an external component.
         program.add("componentScope = scope;\n");
-        program.add("component = new $" + node.tagName.toUpperCase() + "(node, componentScope, argument);\n");
+        program.add("component = new $" + node.tagName.toUpperCase() + "(parent, componentScope, node);\n");
     }
 
+    program.pop();
 }
 
 function Template() {
