@@ -2,19 +2,32 @@
 
 module.exports = Document;
 function Document() {
+    this.doctype = null;
     this.documentElement = null;
 }
 
+Document.prototype.nodeType = 9;
 Document.prototype.Node = Node;
 Document.prototype.Element = Element;
 Document.prototype.TextNode = TextNode;
+Document.prototype.Comment = Comment;
+Document.prototype.Attr = Attr;
+Document.prototype.NamedNodeMap = NamedNodeMap;
 
 Document.prototype.createTextNode = function (text) {
     return new this.TextNode(this, text);
 };
 
+Document.prototype.createComment = function (text) {
+    return new this.Comment(this, text);
+};
+
 Document.prototype.createElement = function (type) {
     return new this.Element(this, type);
+};
+
+Document.prototype.createAttribute = function (name) {
+    return new this.Attr(this, name);
 };
 
 function Node(document) {
@@ -98,12 +111,86 @@ TextNode.prototype = Object.create(Node.prototype);
 TextNode.prototype.constructor = TextNode;
 TextNode.prototype.nodeType = 3;
 
+function Comment(document, text) {
+    Node.call(this, document);
+    this.data = text;
+}
+
+Comment.prototype = Object.create(Node.prototype);
+Comment.prototype.constructor = Comment;
+Comment.prototype.nodeType = 8;
+
 function Element(document, type) {
     Node.call(this, document);
     this.tagName = type;
+    this.attributes = new this.ownerDocument.NamedNodeMap();
 }
 
 Element.prototype = Object.create(Node.prototype);
 Element.prototype.constructor = Element;
 Element.prototype.nodeType = 1;
+
+Element.prototype.hasAttribute = function (name) {
+    var attr = this.attributes.getNamedItem(name);
+    return !!attr;
+};
+
+Element.prototype.getAttribute = function (name) {
+    var attr = this.attributes.getNamedItem(name);
+    return attr ? attr.value : null;
+};
+
+Element.prototype.setAttribute = function (name, value) {
+    var attr = this.ownerDocument.createAttribute(name);
+    attr.value = value;
+    this.attributes.setNamedItem(attr);
+};
+
+Element.prototype.removeAttribute = function (name) {
+    this.attributes.removeNamedItem(name);
+};
+
+function Attr(ownerDocument, name) {
+    this.ownerDocument = ownerDocument;
+    this.name = name;
+    this.value = null;
+}
+
+Attr.prototype.nodeType = 2;
+
+function NamedNodeMap() {
+    this.length = 0;
+}
+
+NamedNodeMap.prototype.getNamedItem = function (name) {
+    return this[name];
+};
+
+NamedNodeMap.prototype.setNamedItem = function (attr) {
+    var name = attr.name;
+    var previousAttr = this[name];
+    if (!previousAttr) {
+        this[this.length] = attr;
+        this.length++;
+        previousAttr = null;
+    }
+    this[name] = attr;
+    return previousAttr;
+};
+
+NamedNodeMap.prototype.removeNamedItem = function (name) {
+    var name = attr.name;
+    var attr = this[name];
+    if (!attr) {
+        throw new Error("Not found");
+    }
+    var index = Array.prototype.indexOf.call(this, attr);
+    delete this[name];
+    delete this[index];
+    this.length--;
+};
+
+NamedNodeMap.prototype.item = function (index) {
+    return this[index];
+};
 

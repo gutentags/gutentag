@@ -89,7 +89,11 @@ Node.prototype.getActualFirstNode = function () {
 Object.defineProperty(Node.prototype, "innerHTML", {
     get: function () {
         return this.actualNode.innerHTML;
-    }
+    }//,
+    //set: function (html) {
+    //    // TODO invalidate any subcontained child nodes
+    //    this.actualNode.innerHTML = html;
+    //}
 });
 
 function Element(document, type) {

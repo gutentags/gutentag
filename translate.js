@@ -7,6 +7,7 @@
 var Q = require("q");
 var domenic = require("domenic");
 var parser = new domenic.DOMParser();
+var innerText = require("./dom/inner-text");
 
 module.exports = function translate(module, type) {
     var trim = 0;
@@ -274,9 +275,9 @@ function translateFragment(node, program, template, name, displayName) {
 function negotiateArgument(node, argument, parameter, program, template, name, displayName) {
     program.push();
 
-    program.add("node = document.createElement(\"body\");\n");
+    program.add("node = {};\n");
     if (parameter.innerText) {
-        program.add("node.innerText = " + JSON.stringify(node.innerText) + ";\n");
+        program.add("node.innerText = " + JSON.stringify(innerText(node)) + ";\n");
     } else if (parameter.innerHTML) {
         program.add("node.innerHTML = " + JSON.stringify(node.innerHTML) + ";\n");
     } else if (parameter.component) {

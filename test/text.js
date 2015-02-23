@@ -12,8 +12,8 @@ var scope = new Scope();
 var essay = new Essay(document.documentElement, scope);
 essay.greeting.value = "Guten Tag, Welt!";
 
-expect(actualDocument.firstChild.innerHTML).toBe("<body>  Guten Tag, Welt! </body>");
+expect(actualDocument.firstChild.innerHTML).toBe("<body> Guten Tag, Welt! </body>");
 
 essay.greeting.value = "Auf Wiederseh'n!";
 
-expect(actualDocument.firstChild.innerHTML).toBe("<body>  Auf Wiederseh'n! </body>");
+expect(actualDocument.firstChild.innerHTML).toBe("<body> Auf Wiederseh'n! </body>");
