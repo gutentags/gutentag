@@ -34,7 +34,6 @@ Essay.prototype.addChild = function (child, id, scope) {
 };
 
 Essay.prototype.handleEvent = function (event) {
-    console.log('click', event.target.dataset.action);
     var action = event.target.dataset.action;
     if (action === "add") {
         this.children.values.push(this.nextValue++);

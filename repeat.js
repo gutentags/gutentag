@@ -33,6 +33,9 @@ Repetition.prototype.handleValuesRangeChange = function (plus, minus, index) {
         iteration.value = null;
         iteration.index = null;
         iteration.body = null;
+        if (iteration.destroy) {
+            iteration.destroy();
+        }
     }, this);
 
     var nextIteration = this.iterations[index + 1];
