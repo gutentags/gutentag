@@ -35,3 +35,11 @@ Switch.prototype.constructCase = function (value) {
     }
 };
 
+Switch.prototype.destroy = function () {
+    for (var name in this.cases) {
+        var child = this.cases[name];
+        if (child.destroy) {
+            child.destroy();
+        }
+    }
+};
