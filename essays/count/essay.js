@@ -7,7 +7,7 @@ Essay.prototype.addChild = function (child, id, scope) {
     if (id === "repeat") {
         this.repeat = child;
     } else if (id === "text") {
-        var iteration = scope.value;
+        var iteration = scope.repeatIteration;
         child.value = iteration.value;
     }
 };

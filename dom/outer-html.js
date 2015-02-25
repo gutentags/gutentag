@@ -9,7 +9,7 @@ function outerHTML(node) {
         var attributes = node.attributes;
         for (var index = 0; index < attributes.length; index++) {
             var attribute = attributes.item(index);
-            string += " " + attribute.key + "=\"" + enquote(attribute.value) + "\"";
+            string += " " + attribute.name + "=\"" + enquote(attribute.value) + "\"";
         }
         string += ">";
         string += innerHTML(node);
@@ -51,7 +51,7 @@ function encode(string) {
     return string.replace(nonAttributeModeSpecialCharRegExp, specialCharToEntity);
 }
 
-function encode(string) {
+function enquote(string) {
     return string.replace(attributeModeSpecialCharRegExp, specialCharToEntity);
 }
 

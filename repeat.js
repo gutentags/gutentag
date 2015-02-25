@@ -3,11 +3,12 @@ var ObservableObject = require("collections/observable-object");
 require("collections/observable-array");
 
 module.exports = Repetition;
-function Repetition(body, scope, argument) {
+function Repetition(body, scope, argument, id) {
     this.body = body;
     this.scope = scope;
     this.iterations = [];
     this.Iteration = argument.component;
+    this.id = id;
     this._values = [];
     this._values.observeRangeChange(this, "values");
 }
@@ -41,7 +42,7 @@ Repetition.prototype.handleValuesRangeChange = function (plus, minus, index) {
         var iterationNode = document.createBody();
         var iteration = Object.create(this.Iteration.prototype);
         var iterationScope = scope.nest();
-        iterationScope.value = iteration;
+        iterationScope[this.id + 'Iteration'] = iteration;
         iteration.value = value;
         iteration.index = index + offset;
         iteration.body = iterationNode;

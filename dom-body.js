@@ -53,6 +53,9 @@ Node.prototype.insertBefore = function insertBefore(childNode, nextSibling) {
 };
 
 Node.prototype.removeChild = function removeChild(childNode) {
+    if (!childNode) {
+        throw new Error("Can't remove child " + childNode);
+    }
     childNode.extract();
     this.getActualElement().removeChild(childNode.actualNode);
     BaseNode.prototype.removeChild.call(this, childNode);

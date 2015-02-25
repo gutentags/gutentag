@@ -112,6 +112,9 @@ function analyzeHead(head, program, template, module) {
                             parameter.component = true;
                             // TODO accepts as different names
                             template.addTag("ARGUMENT", {type: "argument", module: {parameter: {}}});
+                        } else if (accepts === ".component*") {
+                            console.log("ACCEPTS COMPONENTS", module.id);
+                            parameter.components = true;
                         } else {
                             // TODO fancy argument patterns
                         }
@@ -150,8 +153,7 @@ function translateBody(body, program, template, name, displayName) {
     program.add("var document = body.ownerDocument;\n");
     program.add("var scope = this.scope = argumentScope.root.nest(this);\n");
     program.add("scope.argumentScope = argumentScope;\n");
-    program.add("scope.owner = this;\n");
-    program.add("scope.value = this;\n");
+    program.add("scope.this = this;\n");
 
     // Build out the body
     translateSegment(body, program, template, name, displayName);
@@ -225,13 +227,13 @@ function translateElement(node, program, template, name, displayName) {
 
     // Introduce new component or node to its owner.
     if (id) {
-        program.add("if (scope.owner.addChild) {\n");
+        program.add("if (scope.this.addChild) {\n");
         program.indent();
-        program.add("scope.owner.addChild(component, " + JSON.stringify(id) + ", scope);\n");
+        program.add("scope.this.addChild(component, " + JSON.stringify(id) + ", scope);\n");
         program.exdent();
         program.add("} else {\n");
         program.indent();
-        program.add("scope.owner[" + JSON.stringify(id) + "] = component;\n");
+        program.add("scope.this[" + JSON.stringify(id) + "] = component;\n");
         program.exdent();
         program.add("}\n");
     } else if (component) {
@@ -281,34 +283,44 @@ function negotiateArgument(node, argument, parameter, program, template, name, d
     } else if (parameter.innerHTML) {
         program.add("node.innerHTML = " + JSON.stringify(node.innerHTML) + ";\n");
     } else if (parameter.component) {
-        var argumentProgram = new Program();
-        var argumentSuffix = "$" + (template.nextArgumentIndex++);
-        var argumentName = name + argumentSuffix;
-        var argumentDisplayName = displayName + argumentSuffix;
-        translateArgument(node, argumentProgram, template, argumentName, argumentDisplayName);
-        program.addProgram(argumentProgram);
+        var argumentName = defineComponent(node, program, template, name, displayName);
         program.add("node.component = $" + argumentName + ";\n");
-    } else if (parameter.firstChild) {
-        var at = parameter.firstChild;
-        while (at) {
-            // TODO recurse to build argument tree
-            at = at.nextSibling;
+    } else if (parameter.components) {
+        var child = node.firstChild;
+        while (child) {
+            if (child.nodeType === 1) {
+                var argumentName = defineComponent(child, program, template, name, displayName);
+                program.add("node[" + JSON.stringify(child.tagName.toLowerCase()) + "] = $" + argumentName + ";\n");
+            }
+            child = child.nextSibling;
         }
     }
+
+    var id = node.getAttribute("id");
 
     // Pass the scope back to the caller
     if (argument.type === "argument") {
         // Instantiate an argument from the template that instantiated this.
         program.add("componentScope = scope.argumentScope;\n");
         // TODO open up the field for argument "as"
-        program.add("component = new $ARGUMENT.component(parent, componentScope, node);\n");
+        program.add("component = new $ARGUMENT.component(parent, componentScope, node, " + JSON.stringify(id) + ");\n");
     } else if (argument.type === "external") {
         // Pass a chunk of our own template to an external component.
         program.add("componentScope = scope;\n");
-        program.add("component = new $" + node.tagName.toUpperCase() + "(parent, componentScope, node);\n");
+        program.add("component = new $" + node.tagName.toUpperCase() + "(parent, componentScope, node, " + JSON.stringify(id) + ");\n");
     }
 
     program.pop();
+}
+
+function defineComponent(node, program, template, name, displayName) {
+    var argumentProgram = new Program();
+    var argumentSuffix = "$" + (template.nextArgumentIndex++);
+    var argumentName = name + argumentSuffix;
+    var argumentDisplayName = displayName + argumentSuffix;
+    translateArgument(node, argumentProgram, template, argumentName, argumentDisplayName);
+    program.addProgram(argumentProgram);
+    return argumentName;
 }
 
 function Template() {
