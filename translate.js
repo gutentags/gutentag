@@ -66,7 +66,8 @@ function analyzeDocument(document, program, template, module) {
 }
 
 function analyzeHead(head, program, template, module) {
-    template.addTag("THIS", {type: "this"});
+    template.addTag("THIS", {type: "external", module: module});
+    module.parameter = {};
     if (head) {
         var child = head.firstChild;
         while (child) {
