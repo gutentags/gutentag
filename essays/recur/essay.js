@@ -17,7 +17,7 @@ Object.defineProperty(Essay.prototype, "value", {
     }
 });
 
-Essay.prototype.addChild = function (child, id, scope) {
+Essay.prototype.add = function (child, id, scope) {
     if (child.tagName === "BUTTON") {
         child.actualNode.dataset.action = id;
         child.actualNode.addEventListener("click", this);

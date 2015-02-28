@@ -41,7 +41,6 @@ module.exports = function translate(module, type) {
     })).then(function () {
         translateDocument(document, program, template, module, "THIS", displayName);
         module.text = program.digest();
-        console.log(module.text);
     });
 };
 
@@ -228,9 +227,9 @@ function translateElement(node, program, template, name, displayName) {
 
     // Introduce new component or node to its owner.
     if (id) {
-        program.add("if (scope.this.addChild) {\n");
+        program.add("if (scope.this.add) {\n");
         program.indent();
-        program.add("scope.this.addChild(component, " + JSON.stringify(id) + ", scope);\n");
+        program.add("scope.this.add(component, " + JSON.stringify(id) + ", scope);\n");
         program.exdent();
         program.add("} else {\n");
         program.indent();
