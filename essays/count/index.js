@@ -7,9 +7,11 @@ var Essay = require("./essay.html");
 var scope = new Scope();
 var document = new Document(window.document.body);
 var essay = new Essay(document.documentElement, scope);
-essay.repeat.value = [1, 2, 3];
 
+var values = [1, 2, 3];
+
+essay.repeat.value = values;
 setInterval(function () {
-    var value = essay.repeat.value.shift();
-    essay.repeat.value.push(value);
+    var value = values.shift();
+    values.push(value);
 }, 1000);

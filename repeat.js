@@ -2,6 +2,8 @@
 var ObservableObject = require("collections/observable-object");
 require("collections/observable-array");
 
+var empty = [];
+
 module.exports = Repetition;
 function Repetition(body, scope, argument, id) {
     this.body = body;
@@ -9,8 +11,8 @@ function Repetition(body, scope, argument, id) {
     this.iterations = [];
     this.Iteration = argument.component;
     this.id = id;
-    this._value = [];
-    this._value.observeRangeChange(this, "value");
+    this._value = null;
+    this.valueRangeChangeObserver = null;
 }
 
 Object.defineProperty(Repetition.prototype, "value", {
@@ -18,7 +20,17 @@ Object.defineProperty(Repetition.prototype, "value", {
         return this._value;
     },
     set: function (value) {
-        this._value.swap(0, this._value.length, value);
+        if (!Array.isArray(value)) {
+            throw new Error('Value of repetition must be an array');
+        }
+        if (this.valueRangeChangeObserver) {
+            this.valueRangeChangeObserver.cancel();
+            this.handleValueRangeChange(empty, this._value, 0);
+        }
+        this._value = value;
+        this.handleValueRangeChange(this._value, empty, 0);
+        this.valueRangeChangeObserver =
+            this._value.observeRangeChange(this, "value");
     }
 });
 
