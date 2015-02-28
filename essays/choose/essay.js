@@ -5,9 +5,9 @@ function Essay() {
 }
 
 Essay.prototype.add = function (child, id, scope) {
-    if (id === "switch") {
-        this.switch = child;
-        this.buttons.value = Object.keys(this.switch.caseConstructors);
+    if (id === "choose") {
+        this.choose = child;
+        this.buttons.value = Object.keys(this.choose.optionConstructors);
     } else if (id === "buttons") {
         this.buttons = child;
     } else if (id === "button") {
@@ -19,6 +19,6 @@ Essay.prototype.add = function (child, id, scope) {
 };
 
 Essay.prototype.handleEvent = function (event) {
-    this.switch.value = event.target.dataset.value;
+    this.choose.value = event.target.dataset.value;
 };
 

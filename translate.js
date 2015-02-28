@@ -113,7 +113,6 @@ function analyzeHead(head, program, template, module) {
                             // TODO accepts as different names
                             template.addTag("ARGUMENT", {type: "argument", module: {parameter: {}}});
                         } else if (accepts === ".component*") {
-                            console.log("ACCEPTS COMPONENTS", module.id);
                             parameter.components = true;
                         } else {
                             // TODO fancy argument patterns
