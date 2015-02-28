@@ -9,20 +9,20 @@ function Repetition(body, scope, argument, id) {
     this.iterations = [];
     this.Iteration = argument.component;
     this.id = id;
-    this._values = [];
-    this._values.observeRangeChange(this, "values");
+    this._value = [];
+    this._value.observeRangeChange(this, "value");
 }
 
-Object.defineProperty(Repetition.prototype, "values", {
+Object.defineProperty(Repetition.prototype, "value", {
     get: function () {
-        return this._values;
+        return this._value;
     },
-    set: function (values) {
-        this._values.swap(0, this._values.length, values);
+    set: function (value) {
+        this._value.swap(0, this._value.length, value);
     }
 });
 
-Repetition.prototype.handleValuesRangeChange = function (plus, minus, index) {
+Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
     var scope = this.scope;
     var body = this.body;
     var document = this.body.ownerDocument;

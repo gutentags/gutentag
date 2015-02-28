@@ -7,7 +7,7 @@ function Essay() {
 Essay.prototype.addChild = function (child, id, scope) {
     if (id === "switch") {
         this.switch = child;
-        this.buttons.values = Object.keys(this.switch.caseConstructors);
+        this.buttons.value = Object.keys(this.switch.caseConstructors);
     } else if (id === "buttons") {
         this.buttons = child;
     } else if (id === "button") {

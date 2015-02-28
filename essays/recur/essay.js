@@ -36,13 +36,13 @@ Essay.prototype.addChild = function (child, id, scope) {
 Essay.prototype.handleEvent = function (event) {
     var action = event.target.dataset.action;
     if (action === "add") {
-        this.children.values.push(this.nextValue++);
+        this.children.value.push(this.nextValue++);
     } else if (action === "sub") {
         this.parent.removeChild(this.value);
     }
 };
 
 Essay.prototype.removeChild = function (value) {
-    var index = this.children.values.indexOf(value);
-    this.children.values.splice(index, 1);
+    var index = this.children.value.indexOf(value);
+    this.children.value.splice(index, 1);
 };
