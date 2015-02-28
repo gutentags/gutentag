@@ -17,14 +17,16 @@
   },
   "homepage": "https://github.com/kriskowal/gutentag",
   "devDependencies": {
-    "jasminum": "^2.0.5"
+    "jasminum": "^2.0.5",
+    "uglify-js": "^2.4.16"
   },
   "translators": {
     "html": "./translate-html",
     "xml": "./translate-xml"
   },
   "scripts": {
-    "test": "jasminum test"
+    "test": "jasminum test",
+    "build": "mrs essays/text/index.js | uglifyjs > essays/text/bundle.js"
   },
   "dependencies": {
     "collections": "^2.0.1",
