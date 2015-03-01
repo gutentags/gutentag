@@ -55,13 +55,19 @@ Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
 
     this.iterations.swap(index, minus.length, plus.map(function (value, offset) {
         var iterationNode = document.createBody();
-        var iteration = Object.create(this.Iteration.prototype);
         var iterationScope = scope.nest();
-        iterationScope[this.id + 'Iteration'] = iteration;
+
+        var iteration = new this.Iteration(iterationNode, iterationScope);
         iteration.value = value;
         iteration.index = index + offset;
         iteration.body = iterationNode;
-        this.Iteration.call(iteration, iterationNode, iterationScope);
+
+        var id = this.id + 'Iteration';
+        iterationScope[id] = iteration;
+        if (scope.this.add) {
+            scope.this.add(iteration, id, iterationScope);
+        }
+
         body.insertBefore(iterationNode, nextSibling);
         return iteration;
     }, this));
