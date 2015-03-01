@@ -155,7 +155,7 @@ function translateBody(body, program, template, name, displayName) {
     program.add("scope.this = this;\n");
 
     // Build out the body
-    translateSegment(body, program, template, name, displayName);
+    translateSegment(body, program, template, name, displayName, false);
 
     // Note "this" in scope.
     // This is a good hook for final wiring.
@@ -179,43 +179,57 @@ function translateBody(body, program, template, name, displayName) {
     }
 }
 
-function translateArgument(node, program, template, name, displayName) {
+function translateArgument(node, program, template, name, displayName, significantSpace) {
     program.add("var $" + name + " = function " + displayName + "(body, scope, $ARGUMENT) {\n");
     program.indent();
     program.add("this.scope = scope;\n");
     program.add("var document = body.ownerDocument;\n");
-    translateSegment(node, program, template, name, displayName);
+    translateSegment(node, program, template, name, displayName, significantSpace);
     program.exdent();
     program.add("};\n");
 }
 
-function translateSegment(node, program, template, name, displayName) {
+function translateSegment(node, program, template, name, displayName, significantSpace) {
     var header = program.add("var parent = body, parents = [], node, component, componentScope, argument;\n");
-    var unused = true;
-    var child = node.firstChild;
-    while (child) {
-        if (child.nodeType === 1 /* domenic.Element.ELEMENT_NODE*/) {
-            unused = false;
-            translateElement(child, program, template, name, displayName);
-        } else if (child.nodeType === 3 /*domenic.Element.TEXT_NODE*/) {
-            var text = child.nodeValue;
-            text = text.replace(/[\s\n]+/g, " ");
-            if (text) {
-                unused = false;
-                program.add("parent.appendChild(document.createTextNode(" + JSON.stringify(text) + "));\n");
-            }
-        }
-        child = child.nextSibling;
-    }
+    var unused = translateFragment(node, program, template, name, displayName, significantSpace);
     if (unused) {
         program.retract(header);
     }
 }
 
-function translateElement(node, program, template, name, displayName) {
+function translateFragment(node, program, template, name, displayName, significantSpace) {
+    var child = node.firstChild;
+    var text;
+    var unused = true;
+    while (child) {
+        if (child.nodeType === 1 /*domenic.Element.ELEMENT_NODE*/) {
+            translateElement(child, program, template, name, displayName, significantSpace);
+            unused = false;
+        } else if (child.nodeType === 3 /*domenic.Element.TEXT_NODE*/) {
+            text = child.nodeValue;
+            if (significantSpace) {
+                text = text.replace(/[\s\n]+/g, " ");
+            } else {
+                text = text.trim();
+            }
+            if (text) {
+                program.add("parent.appendChild(document.createTextNode(" + JSON.stringify(text) + "));\n");
+                unused = false;
+            }
+        }
+        child = child.nextSibling;
+    }
+    return unused;
+}
+
+function translateElement(node, program, template, name, displayName, significantSpace) {
     var id = node.getAttribute("id");
     var tagName = node.tagName.toUpperCase();
     var argumentTag = template.getTag(tagName);
+
+    if (tagName === "SP") {
+        return translateFragment(node, program, template, name, displayName, true);
+    }
 
     if (argumentTag) {
         program.add("node = document.createBody();\n");
@@ -254,27 +268,9 @@ function translateElement(node, program, template, name, displayName) {
             }
             program.add("node.setAttribute(" + JSON.stringify(key) + ", " + JSON.stringify(value) + ");\n");
         }
-        translateFragment(node, program, template, name, displayName);
-    }
-}
-
-function translateFragment(node, program, template, name, displayName) {
-    var child = node.firstChild;
-    var text;
-    while (child) {
-        // invariant: node is the parent node
-        if (child.nodeType === 1 /*domenic.Element.ELEMENT_NODE*/) {
-            program.push();
-            translateElement(child, program, template, name, displayName);
-            program.pop();
-        } else if (child.nodeType === 3 /*domenic.Element.TEXT_NODE*/) {
-            text = child.nodeValue;
-            text = text.replace(/[\s\n]+/g, " ");
-            if (text) {
-                program.add("node.appendChild(document.createTextNode(" + JSON.stringify(text) + "));\n");
-            }
-        }
-        child = child.nextSibling;
+        program.push();
+        translateFragment(node, program, template, name, displayName, significantSpace);
+        program.pop();
     }
 }
 
