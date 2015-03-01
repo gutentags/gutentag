@@ -157,6 +157,14 @@ function translateBody(body, program, template, name, displayName) {
     // Build out the body
     translateSegment(body, program, template, name, displayName);
 
+    // Note "this" in scope.
+    // This is a good hook for final wiring.
+    program.add("if (this.add) {\n");
+    program.indent();
+    program.add("this.add(this, \"this\", this.scope);\n");
+    program.exdent();
+    program.add("}\n");
+
     // Call super constructor
     if (template.extends) {
         program.add("$SUPER.apply(this, arguments);\n");
@@ -226,13 +234,10 @@ function translateElement(node, program, template, name, displayName) {
 
     // Introduce new component or node to its owner.
     if (id) {
+        program.add("scope[" + JSON.stringify(id) + "] = component;\n");
         program.add("if (scope.this.add) {\n");
         program.indent();
         program.add("scope.this.add(component, " + JSON.stringify(id) + ", scope);\n");
-        program.exdent();
-        program.add("} else {\n");
-        program.indent();
-        program.add("scope.this[" + JSON.stringify(id) + "] = component;\n");
         program.exdent();
         program.add("}\n");
     } else if (component) {
