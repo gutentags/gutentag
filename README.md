@@ -421,6 +421,29 @@ The ``<this></this>`` tag stands for this component.
 </html>
 ```
 
+### Space
+
+Unlike normal HTML, by default, white space is treated as insignificant.
+All text nodes are trimmed and thrown away if they only contain spaces.
+However, there is a built in ``<sp>`` tag that explicitly marks parts of the
+document where white space is significant.
+In these regions, sequences of space are preserved.
+In the following example, the string "Guten Tag, Welt!" is repeated for every
+value of the greetings iteration.
+The ``<sp>`` tag ensures that these greetings are delimited by space.
+
+```html
+<!doctype html>
+<html>
+    <head>
+        <link rel="tag" href="../../repeat.html">
+    </head>
+    <body>
+        <repeat id="greetings"><sp>Guten Tag, Welt! </sp></repeat>
+    </body>
+</html>
+```
+
 ### XML
 
 Gutentag supports XML for cases where the HTML5 parser gets in your way.
