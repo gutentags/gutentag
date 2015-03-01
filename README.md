@@ -58,6 +58,15 @@ To do so requires some minimal understanding of the tag calling convention.
 A tag module exports a constructor.
 The constructor accepts a `body`, `scope`, and an optional `argument`.
 
+```
+"use strict";
+module.exports = Component;
+function Component(body, scope, argument) {
+    this.scope = scope.root.nest();
+    body.appendChild(document.createTextNode("Guten Tag, Welt!\n"));
+}
+```
+
 The `body` is a special kind of node in a virtual document.
 It represents a point in the actual document that the given tag will control.
 Bodies can be added and removed from the virtual document, and all of their
@@ -68,14 +77,18 @@ there are cases where you would want more than one of these inline.
 In other cases where having a wrapper element would interfere with CSS
 selectors, particularly for the flex model.
 
-The `scope` is an object that captures components along its prototype chain.
+The `scope` is an object that captures components by their id along its
+prototype chain.
 The root scope has a `root` property that refers to itself, so `scope.root` will
 always give you this empty scope object.
 Every scope has a `nest()` method that returns an object that inherits
 prototypically from its creator.
 Tag components use `scope.root.nest()` to create a new lexical environment such
 that `scope.this` refers to the component.
-The repeat tag uses `scope.nest()` to create new scopes for each iteration.
+The repeat tag uses `scope.nest()` to create new scopes for each iteration, and
+names the iteration after the repetition's identifier, plus "Iteration", so
+`scope.itemsIteration` would give you access to the iteration object for the
+``<repeat id="items">`` repetition.
 
 Components create a body with `body.ownerDocument.createBody()`, add that
 body to their own document, and pass it as the first argument of a child
@@ -84,6 +97,12 @@ They pass their own scope as the second argument.
 Depending on how the child component accepts arguments, it will construct an
 appropriate `argument` object from the document between their start and end tag,
 and pass that as the third argument.
+
+```js
+var childBody = body.ownerDocument.createBody();
+body.appendChild(childBody);
+var component = new Component(childBody, scope, argument);
+```
 
 The first component on the page does not accept an argument, so you just create
 a body and a scope.
