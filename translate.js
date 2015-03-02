@@ -8,6 +8,7 @@ var Q = require("q");
 var domenic = require("domenic");
 var parser = new domenic.DOMParser();
 var innerText = require("./dom/inner-text");
+var Program = require("./program");
 
 module.exports = function translate(module, type) {
     var trim = 0;
@@ -27,11 +28,12 @@ module.exports = function translate(module, type) {
     }
     var document = parser.parseFromString(module.text, type);
     var program = new Program();
+    var section = program.documentElement;
     var template = new Template();
-    program.add('"use strict";\n');
+    section.add('"use strict";\n');
     module.dependencies = [];
     module.neededTags = {};
-    analyzeDocument(document, program, template, module);
+    analyzeDocument(document, section, template, module);
     return Q.all(Object.keys(module.neededTags).map(function (name) {
         var href = module.neededTags[name];
         return module.require.load(href)
@@ -39,7 +41,14 @@ module.exports = function translate(module, type) {
             template.getTag(name).module = module.require.lookup(href);
         });
     })).then(function () {
-        translateDocument(document, program, template, module, "THIS", displayName);
+        translateDocument(
+            document,
+            section.addSection("body"),
+            template,
+            module,
+            "THIS",
+            displayName
+        );
         module.text = program.digest();
     });
 };
@@ -134,58 +143,59 @@ function translateDocument(document, program, template, module, name, displayNam
         while (child) {
             if (child.nodeType === 1 /* ELEMENT_NODE */) {
                 if (child.tagName.toLowerCase() === "body") {
-                    translateBody(child, program, template, name, displayName);
+                    translateBody(
+                        child,
+                        program.addSection("element"),
+                        template,
+                        name,
+                        displayName
+                    );
                 }
             }
             child = child.nextSibling;
         }
         program.add("module.exports = $THIS;\n");
     }
-    return program.digest();
 }
 
 function translateBody(body, program, template, name, displayName) {
     program.add("var $" + name + " = function " + displayName + "(body, argumentScope, $ARGUMENT) {\n");
-    program.indent();
-
-    // Establish the component and its scope
-    program.add("var document = body.ownerDocument;\n");
-    program.add("var scope = this.scope = argumentScope.root.nest(this);\n");
-    program.add("scope.argumentScope = argumentScope;\n");
-    program.add("scope.this = this;\n");
-
-    // Build out the body
-    translateSegment(body, program, template, name, displayName, false);
-
-    // Note "this" in scope.
-    // This is a good hook for final wiring.
-    program.add("if (this.add) {\n");
-    program.indent();
-    program.add("this.add(this, \"this\", this.scope);\n");
-    program.exdent();
-    program.add("}\n");
-
-    // Call super constructor
-    if (template.extends) {
-        program.add("$SUPER.apply(this, arguments);\n");
-    }
-
-    program.exdent();
+    var bodyProgram = program.indent();
     program.add("};\n");
     // Trailing inheritance declarations
     if (template.extends) {
         program.add("$THIS.prototype = Object.create($SUPER.prototype);\n");
         program.add("$THIS.prototype.constructor = $THIS;\n");
     }
+
+    // Establish the component and its scope
+    bodyProgram.add("var document = body.ownerDocument;\n");
+    bodyProgram.add("var scope = this.scope = argumentScope.root.nest(this);\n");
+    bodyProgram.add("scope.argumentScope = argumentScope;\n");
+    bodyProgram.add("scope.this = this;\n");
+
+    // Build out the body
+    translateSegment(body, bodyProgram, template, name, displayName, false);
+
+    // Note "this" in scope.
+    // This is a good hook for final wiring.
+    bodyProgram.add("if (this.add) {\n");
+    bodyProgram.add("    this.add(this, \"this\", this.scope);\n");
+    bodyProgram.add("}\n");
+
+    // Call super constructor
+    if (template.extends) {
+        bodyProgram.add("$SUPER.apply(this, arguments);\n");
+    }
+
 }
 
 function translateArgument(node, program, template, name, displayName, significantSpace) {
     program.add("var $" + name + " = function " + displayName + "(body, scope, $ARGUMENT) {\n");
-    program.indent();
-    program.add("this.scope = scope;\n");
-    program.add("var document = body.ownerDocument;\n");
-    translateSegment(node, program, template, name, displayName, significantSpace);
-    program.exdent();
+    var argumentProgram = program.indent();
+    argumentProgram.add("this.scope = scope;\n");
+    argumentProgram.add("var document = body.ownerDocument;\n");
+    translateSegment(node, argumentProgram, template, name, displayName, significantSpace);
     program.add("};\n");
 }
 
@@ -193,7 +203,7 @@ function translateSegment(node, program, template, name, displayName, significan
     var header = program.add("var parent = body, parents = [], node, component, componentScope, argument;\n");
     var unused = translateFragment(node, program, template, name, displayName, significantSpace);
     if (unused) {
-        program.retract(header);
+        program.removeChild(header);
     }
 }
 
@@ -250,12 +260,10 @@ function translateElement(node, program, template, name, displayName, significan
     if (id) {
         program.add("scope[" + JSON.stringify(id) + "] = component;\n");
         program.add("if (scope.this.add) {\n");
-        program.indent();
-        program.add("scope.this.add(component, " + JSON.stringify(id) + ", scope);\n");
-        program.exdent();
+        program.add("    scope.this.add(component, " + JSON.stringify(id) + ", scope);\n");
         program.add("}\n");
     } else if (component) {
-        program.retract(component);
+        program.removeChild(component);
     }
 
     if (!argumentTag) {
@@ -314,12 +322,11 @@ function negotiateArgument(node, argument, parameter, program, template, name, d
 }
 
 function defineComponent(node, program, template, name, displayName) {
-    var argumentProgram = new Program();
+    var argumentProgram = program.ownerDocument.documentElement.addSection("argument");
     var argumentSuffix = "$" + (template.nextArgumentIndex++);
     var argumentName = name + argumentSuffix;
     var argumentDisplayName = displayName + argumentSuffix;
     translateArgument(node, argumentProgram, template, argumentName, argumentDisplayName);
-    program.addProgram(argumentProgram);
     return argumentName;
 }
 
@@ -340,61 +347,3 @@ Template.prototype.hasTag = function (name) {
 Template.prototype.getTag = function (name) {
     return this.tags[name];
 };
-
-function Program() {
-    this.lines = ["\n"];
-    this.programs = [];
-    this.tabs = [];
-}
-
-Program.prototype.addProgram = function (program) {
-    this.programs.push(program);
-};
-
-Program.prototype.add = function (line) {
-    var index = this.lines.length;
-    this.lines.push.apply(this.lines, this.tabs);
-    this.lines.push(line);
-    var until = this.lines.length;
-    return [index, until];
-};
-
-Program.prototype.push = function () {
-    this.add("parents[parents.length] = parent; parent = node;\n");
-};
-
-Program.prototype.pop = function () {
-    this.add("node = parent; parent = parents[parents.length - 1]; parents.length--;\n");
-};
-
-Program.prototype.retract = function (pair) {
-    var index = pair[0];
-    var until = pair[1];
-    while (index < until) {
-        this.lines[index] = "";
-        index++;
-    }
-};
-
-Program.prototype.indent = function () {
-    this.tabs.push("    ");
-};
-
-Program.prototype.exdent = function () {
-    this.tabs.pop();
-};
-
-Program.prototype.collect = function (lines) {
-    lines.push.apply(lines, this.lines);
-    this.programs.forEach(function (program) {
-        program.collect(lines);
-    });
-};
-
-Program.prototype.digest = function () {
-    var lines = [];
-    this.collect(lines);
-    lines.push("\n");
-    return lines.join("");
-};
-
