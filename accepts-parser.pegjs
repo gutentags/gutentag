@@ -1,63 +1,59 @@
 
 tags
     = head:tag tail:( " "+ tag )* {
-        if (tail.length) {
-            var children = [head];
-            for (var index = 0; index < tail.length; index++) {
-                children.push(tail[index][1]);
-            }
-            return {
-                type: "options",
-                options: children
-            };
-        } else {
-            return head;
+        var options = {};
+        options[head.name] = head;
+        for (var index = 0; index < tail.length; index++) {
+            var node = tail[index][1];
+            options[node.name] = node;
         }
+        return {
+            type: "options",
+            options: options
+        };
     }
-
-tag
-    = _ pattern:pattern tree:tree plural:"*"? {
-        tree.pattern = pattern;
+    / tree:tree plural:"*"? {
         if (plural) {
             return {
                 type: "multiple",
-                of: tree
+                of: tree,
+                name: tree.name
             }
         }
         return tree;
     }
 
-pattern
-    = name:name {
-        return {
-            type: "name",
-            name: name
+tag
+    = _ name:name tree:tree plural:"*"? {
+        tree.name = name;
+        if (plural) {
+            return {
+                type: "multiple",
+                of: tree,
+                name: tree.name
+            }
         }
-    }
-    / "" {
-        return {
-            type: "any"
-        }
+        return tree;
     }
 
 tree
     = "[" _ type:$( "body" / "text" / "html" / "entries" ) _ "]" {
         return {
             type: type,
-            pattern: null
+            name: null
         }
     }
     / "(" _ tags:tags _ ")" {
         return {
             type: "children",
-            pattern: null,
+            name: null,
             children: tags
         };
     }
     / "" {
         return {
             type: "body",
-            pattern: null
+            name: null
         };
     }
 
