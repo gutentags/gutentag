@@ -11,8 +11,9 @@ function Repetition(body, scope, argument, id) {
     this.iterations = [];
     this.Iteration = argument.component;
     this.id = id;
-    this._value = null;
     this.valueRangeChangeObserver = null;
+    this._value = null;
+    this.value = [];
 }
 
 Object.defineProperty(Repetition.prototype, "value", {

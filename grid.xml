@@ -1,0 +1,29 @@
+<!-- the following is a fungible motivating use case as yet -->
+<html>
+    <head>
+        <link rel="extends" href="./grid"/>
+        <link rel="tag" href="./repeat.html"/>
+        <link rel="tag" href="./text.html"/>
+        <meta accepts="corner ch rh cd"/>
+    </head>
+    <body>
+        <table>
+            <thead>
+                <tr id="columnRow">
+                    <th><corner/></th>
+                    <repeat id="columns">
+                        <th><ch><text id="ch"/></ch></th>
+                    </repeat>
+                </tr>
+            </thead>
+            <tbody>
+                <repeat id="rows">
+                    <th><rh><text id="rh"/></rh></th>
+                    <repeat id="cells">
+                        <td><cd><text id="cd"/></cd></td>
+                    </repeat>
+                </repeat>
+            </tbody>
+        </table>
+    </body>
+</html>

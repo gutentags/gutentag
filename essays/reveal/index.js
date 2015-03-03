@@ -7,8 +7,8 @@ var Essay = require("./essay.html");
 var scope = new Scope();
 var document = new Document(window.document.body);
 var essay = new Essay(document.documentElement, scope);
-essay.greeting.value = true;
+essay.scope.greeting.value = true;
 
 setInterval(function () {
-    essay.greeting.value = !essay.greeting.value;
+    essay.scope.greeting.value = !essay.greeting.value;
 }, 1000);
