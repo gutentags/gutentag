@@ -114,19 +114,15 @@ function analyzeHead(head, program, template, module) {
                         var accepts = child.getAttribute("accepts");
                         var syntax = parseAccepts(accepts);
                         var parameter = {};
-                        module.parameter = parameter;
-                        if (accepts === "[text]") {
-                            parameter.innerText = true;
-                        } else if (accepts === "[html]") {
-                            parameter.innerHTML = true;
-                        } else if (accepts === "[body]") {
-                            parameter.component = true;
-                            // TODO accepts as different names
-                            template.addTag("ARGUMENT", {type: "argument", module: {parameter: {}}});
-                        } else if (accepts === "[entries]") {
-                            parameter.components = true;
-                        } else {
-                            // TODO fancy argument patterns
+                        module.parameter = syntax;
+                        if (syntax.type === "body") {
+                            template.addTag("ARGUMENT", {
+                                type: "argument",
+                                name: "$ARGUMENT",
+                                module: {parameter: {}}
+                            });
+                        } else if (syntax.type === "options") {
+                            // TODO
                         }
                     }
                     // ...
@@ -288,14 +284,14 @@ function negotiateArgument(node, argument, parameter, program, template, name, d
     program.push();
 
     program.add("node = {};\n");
-    if (parameter.innerText) {
+    if (parameter.type === "text") {
         program.add("node.innerText = " + JSON.stringify(innerText(node)) + ";\n");
-    } else if (parameter.innerHTML) {
+    } else if (parameter.type === "html") {
         program.add("node.innerHTML = " + JSON.stringify(node.innerHTML) + ";\n");
-    } else if (parameter.component) {
+    } else if (parameter.type === "body") {
         var argumentName = defineComponent(node, program, template, name, displayName);
         program.add("node.component = $" + argumentName + ";\n");
-    } else if (parameter.components) {
+    } else if (parameter.type === "entries") {
         var child = node.firstChild;
         while (child) {
             if (child.nodeType === 1) {
@@ -313,7 +309,7 @@ function negotiateArgument(node, argument, parameter, program, template, name, d
         // Instantiate an argument from the template that instantiated this.
         program.add("componentScope = scope.argumentScope;\n");
         // TODO open up the field for argument "as"
-        program.add("component = new $ARGUMENT.component(parent, componentScope, node, " + JSON.stringify(id) + ");\n");
+        program.add("component = new " + argument.name + ".component(parent, componentScope, node, " + JSON.stringify(id) + ");\n");
     } else if (argument.type === "external") {
         // Pass a chunk of our own template to an external component.
         program.add("componentScope = scope;\n");
@@ -338,7 +334,6 @@ function Template() {
 }
 
 Template.prototype.addTag = function (name, tag) {
-    tag.name = name;
     this.tags[name] = tag;
 };
 
