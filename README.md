@@ -288,7 +288,7 @@ Reveals its content based on whether `value` is truthy.
     <head>
         <link rel="extends" href="./blink">
         <link rel="tag" href="gutentag/reveal.html">
-        <meta accepts=".component">
+        <meta accepts="[body]">
     </head>
     <body>
         <reveal id="content"><argument></argument></reveal>
@@ -373,15 +373,15 @@ in various ways to pass an argument into the called tag.
 Tags must express how they receive their argument.
 Note that the following API is subject to radical change before version 1.
 
--   ``<meta accepts=".component">`` receive the entire argument as a component.
+-   ``<meta accepts="[body]">`` receive the entire argument as a component.
     The argument is instantiable in HTML tag definitions as the ``<argument>``
     tag.
--   ``<meta accepts=".component*">`` receive each of the child nodes as a named
+-   ``<meta accepts="[entries]">`` receive each of the child nodes as a named
     argument component. The component constructor will receive an object with
     named properties for each component.
--   ``<meta accepts=".innerText">`` receives the entire argument as a string
+-   ``<meta accepts="[text]">`` receives the entire argument as a string
     from its `innerText`.
--   ``<meta accepts=".innerHTML">`` receives the entire argument as a string
+-   ``<meta accepts="[html]">`` receives the entire argument as a string
     from its `innerHTML`.
 
 For example, this tag parenthesizes its argument.
@@ -390,7 +390,7 @@ For example, this tag parenthesizes its argument.
 <!doctype html>
 <html>
     <head>
-        <meta accepts=".component">
+        <meta accepts="[body]">
     </head>
     <body>(<argument></argument>)</body>
 </html>
@@ -408,7 +408,7 @@ The ``<this></this>`` tag stands for this component.
         <link rel="extends" href="./tree">
         <link rel="tag" href="../../text.html">
         <link rel="tag" href="../../repeat.html">
-        <meta accepts=".component">
+        <meta accepts="[body]">
     </head>
     <body>
         <argument></argument>
