@@ -9,6 +9,7 @@ var domenic = require("domenic");
 var parser = new domenic.DOMParser();
 var innerText = require("./dom/inner-text");
 var Program = require("./program");
+var parseAccepts = require("./accepts-parser").parse;
 
 module.exports = function translate(module, type) {
     var trim = 0;
@@ -111,17 +112,18 @@ function analyzeHead(head, program, template, module) {
                 } else if (child.tagName.toLowerCase() === "meta") {
                     if (child.getAttribute("accepts")) {
                         var accepts = child.getAttribute("accepts");
+                        var syntax = parseAccepts(accepts);
                         var parameter = {};
                         module.parameter = parameter;
-                        if (accepts === ".innerText") {
+                        if (accepts === "[text]") {
                             parameter.innerText = true;
-                        } else if (accepts === ".innerHTML") {
+                        } else if (accepts === "[html]") {
                             parameter.innerHTML = true;
-                        } else if (accepts === ".component") {
+                        } else if (accepts === "[body]") {
                             parameter.component = true;
                             // TODO accepts as different names
                             template.addTag("ARGUMENT", {type: "argument", module: {parameter: {}}});
-                        } else if (accepts === ".component*") {
+                        } else if (accepts === "[entries]") {
                             parameter.components = true;
                         } else {
                             // TODO fancy argument patterns

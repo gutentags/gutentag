@@ -26,8 +26,8 @@ Essay.prototype.add = function (child, id, scope) {
         this.children = child;
     } else if (id === "label") {
         this.label = child;
-    } else if (id === "child") {
-        child.value = scope.childrenIteration.value;
+    } else if (id === "childrenIteration") {
+        scope.child.value = child.value;
     } else if (id === "revealSub") {
         child.value = !!scope.argumentScope.this;
     }
