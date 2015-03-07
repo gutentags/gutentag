@@ -31,9 +31,10 @@
     "build": "mrs essays/text/index.js | uglifyjs > essays/text/bundle.js"
   },
   "dependencies": {
-    "collections": "^2.0.1",
     "domenic": "0.0.0",
     "mr": "^2.0.5",
+    "pop-observe": "^2.0.1",
+    "pop-swap": "^1.0.0",
     "q": "^2.0.3"
   }
 }

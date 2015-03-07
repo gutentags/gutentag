@@ -1,11 +1,11 @@
 "use strict";
 
-var ObservableObject = require("collections/observable-object");
+var O = require("pop-observe");
 
 module.exports = Reveal;
 function Reveal(body, scope, argument) {
     this.value = false;
-    ObservableObject.observePropertyChange(this, "value", this);
+    this.observer = O.observePropertyChange(this, "value", this);
     this.body = body;
     this.scope = scope;
     this.childConstructor = argument.component;
@@ -33,4 +33,5 @@ Reveal.prototype.constructChild = function () {
 
 Reveal.prototype.destroy = function () {
     this.child.destroy();
+    this.observer.cancel();
 };

@@ -1,6 +1,6 @@
 
-var ObservableObject = require("collections/observable-object");
-require("collections/observable-array");
+var O = require("pop-observe");
+var swap = require("pop-swap");
 
 var empty = [];
 
@@ -11,7 +11,7 @@ function Repetition(body, scope, argument, id) {
     this.iterations = [];
     this.Iteration = argument.component;
     this.id = id;
-    this.valueRangeChangeObserver = null;
+    this.observer = null;
     this._value = null;
     this.value = [];
 }
@@ -24,14 +24,13 @@ Object.defineProperty(Repetition.prototype, "value", {
         if (!Array.isArray(value)) {
             throw new Error('Value of repetition must be an array');
         }
-        if (this.valueRangeChangeObserver) {
-            this.valueRangeChangeObserver.cancel();
+        if (this.observer) {
+            this.observer.cancel();
             this.handleValueRangeChange(empty, this._value, 0);
         }
         this._value = value;
         this.handleValueRangeChange(this._value, empty, 0);
-        this.valueRangeChangeObserver =
-            this._value.observeRangeChange(this, "value");
+        this.observer = O.observeRangeChange(this._value, this, "value");
     }
 });
 
@@ -54,7 +53,7 @@ Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
     var nextIteration = this.iterations[index + 1];
     var nextSibling = nextIteration && nextIteration.body;
 
-    this.iterations.swap(index, minus.length, plus.map(function (value, offset) {
+    swap(this.iterations, index, minus.length, plus.map(function (value, offset) {
         var iterationNode = document.createBody();
         var iterationScope = scope.nest();
 
@@ -86,5 +85,9 @@ Repetition.prototype.redraw = function (region) {
     this.iterations.forEach(function (iteration) {
         iteration.redraw(region);
     }, this);
+};
+
+Repetition.prototype.destroy = function () {
+    this.observer.cancel();
 };
 
