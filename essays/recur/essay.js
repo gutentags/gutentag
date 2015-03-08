@@ -29,7 +29,7 @@ Essay.prototype.add = function (child, id, scope) {
     } else if (id === "childrenIteration") {
         scope.child.value = child.value;
     } else if (id === "revealSub") {
-        child.value = !!scope.argumentScope.this;
+        child.value = !!scope.caller.this;
     }
 };
 

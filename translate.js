@@ -157,7 +157,7 @@ function translateDocument(document, program, template, module, name, displayNam
 }
 
 function translateBody(body, program, template, name, displayName) {
-    program.add("var $" + name + " = function " + displayName + "(body, argumentScope, $ARGUMENT) {\n");
+    program.add("var $" + name + " = function " + displayName + "(body, caller, $ARGUMENT) {\n");
     var bodyProgram = program.indent();
     program.add("};\n");
     // Trailing inheritance declarations
@@ -168,8 +168,8 @@ function translateBody(body, program, template, name, displayName) {
 
     // Establish the component and its scope
     bodyProgram.add("var document = body.ownerDocument;\n");
-    bodyProgram.add("var scope = this.scope = argumentScope.root.nest(this);\n");
-    bodyProgram.add("scope.argumentScope = argumentScope;\n");
+    bodyProgram.add("var scope = this.scope = caller.root.nest();\n");
+    bodyProgram.add("scope.caller = caller;\n");
     bodyProgram.add("scope.this = this;\n");
 
     // Build out the body
@@ -307,7 +307,7 @@ function negotiateArgument(node, argument, parameter, program, template, name, d
     // Pass the scope back to the caller
     if (argument.type === "argument") {
         // Instantiate an argument from the template that instantiated this.
-        program.add("componentScope = scope.argumentScope;\n");
+        program.add("componentScope = scope.caller;\n");
         // TODO open up the field for argument "as"
         program.add("component = new " + argument.name + ".component(parent, componentScope, node, " + JSON.stringify(id) + ");\n");
     } else if (argument.type === "external") {
