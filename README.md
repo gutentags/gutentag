@@ -38,11 +38,10 @@ of the underlying JavaScript implementation, if it exists.
 module.exports = List;
 function List() {}
 List.prototype.add = function (child, id, scope) {
-    if (id === "items") {
-        this.items = child;
-    } else if (id === "text") {
-        var iteration = scope.itemsIteration;
-        child.value = iteration.value;
+    if (id === "items:iteration") {
+        scope.text.value = child.value;
+    } else if (id === "this") {
+        this.items = scope.items;
     }
 };
 ```
@@ -86,8 +85,8 @@ prototypically from its creator.
 Tag components use `scope.root.nest()` to create a new lexical environment such
 that `scope.this` refers to the component.
 The repeat tag uses `scope.nest()` to create new scopes for each iteration, and
-names the iteration after the repetition's identifier, plus "Iteration", so
-`scope.itemsIteration` would give you access to the iteration object for the
+names the iteration after the repetition's identifier, plus ":iteration", so
+`scope['items:iteration']` would give you access to the iteration object for the
 ``<repeat id="items">`` repetition.
 
 Components create a body with `body.ownerDocument.createBody()`, add that
@@ -258,7 +257,7 @@ Repeats its content based on the values in the given `value` array.
 
 The repetition creates a scope for each of its iterations.
 In that scope, the iteration object is accessible by a name constructed from the
-id of the iteration, plus "Iteration".
+id of the iteration, plus ":iteration".
 The iteration object has an `index` and a `value` property.
 
 ```js
@@ -266,9 +265,8 @@ The iteration object has an `index` and a `value` property.
 module.exports = List;
 function List() {}
 List.prototype.add = function (child, id, scope) {
-    if (id === "text") {
-        var iteration = scope.itemsIteration;
-        child.value = iteration.value;
+    if (id === "items:iteration") {
+        scope.text.value = child.value;
     }
 };
 ```

@@ -22,15 +22,14 @@ Essay.prototype.add = function (child, id, scope) {
         child.actualNode.dataset.action = id;
         child.actualNode.addEventListener("click", this);
     }
-    if (id === "children") {
-        this.children = child;
-    } else if (id === "label") {
-        this.label = child;
-    } else if (id === "childrenIteration") {
+    if (id === "children:iteration") {
         scope.child.value = child.value;
-    } else if (id === "revealSub") {
-        child.value = !!scope.caller.this;
+    } else if (id === "this") {
+        this.children = scope.children;
+        this.label = scope.label;
+        scope.revealSub.value = !!scope.caller.this;
     }
+
 };
 
 Essay.prototype.handleEvent = function (event) {
