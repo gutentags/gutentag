@@ -1,8 +1,8 @@
 "use strict";
 
 module.exports = Choose;
-function Choose(body, scope, argument) {
-    this.optionConstructors = argument;
+function Choose(body, scope) {
+    this.optionConstructors = scope.argument;
     this.options = {};
     this.bodies = {};
     this.body = body;

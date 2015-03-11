@@ -30,14 +30,15 @@ Section.prototype.add = function add(text) {
     return child;
 };
 
-Section.prototype.addSection = function addSection(type) {
+Section.prototype.addSection = function addSection(type, name) {
     var section = this.ownerDocument.createElement(type);
+    section.name = name;
     this.appendChild(section);
     return section;
 };
 
-Section.prototype.indent = function indent() {
-    return this.addSection("indent");
+Section.prototype.indent = function indent(name) {
+    return this.addSection("indent", name);
 };
 
 Section.prototype.push = function () {
@@ -50,10 +51,13 @@ Section.prototype.pop = function () {
 
 function digestNode(node, prefix) {
     if (node.nodeType === 1) {
+        var string = '';
         if (node.tagName === 'indent') {
+            if (node.name) {
+                string += prefix + '// ' + node.name + '\n';
+            }
             prefix = prefix + '    ';
         }
-        var string = '';
         var currentNode = node.firstChild;
         while (currentNode) {
             string += digestNode(currentNode, prefix);

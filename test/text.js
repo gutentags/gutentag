@@ -10,10 +10,10 @@ var actualDocument = parser.parseFromString("<!doctype html><html><body></body><
 var document = new Document(actualDocument.firstChild.firstChild);
 var scope = new Scope();
 var essay = new Essay(document.documentElement, scope);
-essay.scope.greeting.value = "Guten Tag, Welt!";
+essay.scope.components.greeting.value = "Guten Tag, Welt!";
 
 expect(actualDocument.firstChild.innerHTML).toBe("<body>Guten Tag, Welt!</body>");
 
-essay.scope.greeting.value = "Auf Wiederseh'n!";
+essay.scope.components.greeting.value = "Auf Wiederseh'n!";
 
 expect(actualDocument.firstChild.innerHTML).toBe("<body>Auf Wiederseh'n!</body>");

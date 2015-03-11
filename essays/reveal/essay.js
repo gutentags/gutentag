@@ -7,11 +7,11 @@ function Essay() {
 
 Essay.prototype.add = function (child, id, scope) {
     if (id === "this") {
-        scope.display.actualNode.addEventListener("change", this);
+        scope.components.display.actualNode.addEventListener("change", this);
     }
 }
 
 Essay.prototype.handleEvent = function () {
     this.value = !this.value;
-    this.scope.greeting.value = this.value;
+    this.scope.components.greeting.value = this.value;
 }

@@ -77,6 +77,14 @@ Node.prototype.removeAttribute = function removeAttribute(key) {
     this.actualNode.removeAttribute(key);
 };
 
+Node.prototype.addEventListener = function addEventListener(name, handler, capture) {
+    this.actualNode.addEventListener(name, handler, capture);
+};
+
+Node.prototype.removeEventListener = function removeEventListener(name, handler, capture) {
+    this.actualNode.removeEventListener(name, handler, capture);
+};
+
 Node.prototype.inject = function injectNode() { };
 
 Node.prototype.extract = function extractNode() { };
@@ -133,7 +141,7 @@ function Body(document) {
     Node.call(this, document);
     this.actualNode = document.actualDocument.createTextNode("");
     this.actualFirstChild = null;
-    this.actualBody = document.actualDocument.createElement("NOBODY");
+    this.actualBody = document.actualDocument.createElement("BODY");
 }
 
 Body.prototype = Object.create(Node.prototype);

@@ -1,11 +1,11 @@
 "use strict";
 
 module.exports = Text;
-function Text(body, scope, argument) {
+function Text(body, scope) {
     var node = body.ownerDocument.createTextNode("");
     body.appendChild(node);
     this.node = node;
-    this.defaultText = argument.innerText;
+    this.defaultText = scope.argument.innerText;
     this._value = null;
 }
 

@@ -1,11 +1,11 @@
 "use strict";
 
 module.exports = Html;
-function Html(body, scope, argument) {
+function Html(body, scope) {
     var node = body.ownerDocument.createBody();
     body.appendChild(node);
     this.node = node;
-    this.defaultHtml = argument.innerHTML;
+    this.defaultHtml = scope.argument.innerHTML;
     this.value = null;
 }
 

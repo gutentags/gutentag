@@ -51,6 +51,7 @@ module.exports = function translate(module, type) {
             displayName
         );
         module.text = program.digest();
+        //console.log(module.text);
     });
 };
 
@@ -116,14 +117,32 @@ function analyzeHead(head, program, template, module) {
                         var parameter = {};
                         module.parameter = syntax;
                         if (syntax.type === "body") {
-                            template.addTag("ARGUMENT", {
+                            var as = child.getAttribute("as") || "argument";
+                            template.addTag(as.toUpperCase(), {
                                 type: "argument",
-                                name: "$ARGUMENT",
+                                name: "callee.argument",
                                 module: {parameter: {}}
                             });
                         } else if (syntax.type === "options") {
-                            // TODO
+                            // TODO factor this out
+                            Object.keys(syntax.options).forEach(function (tagName) {
+                                var option = syntax.options[tagName];
+                                var as = option.as || tagName;
+                                if (option.type === "body") {
+                                    template.addTag(as.toUpperCase(), {
+                                        type: "argument",
+                                        name: "callee.argument." + tagName,
+                                        module: {parameter: {}}
+                                    });
+                                } else {
+                                    // TODO
+                                }
+                            });
                         }
+                    } else if (child.getAttribute("exports")) {
+                        var name = child.getAttribute("exports");
+                        var as = child.getAttribute("as");
+                        template.exportNames[name] = as;
                     }
                     // ...
                 }
@@ -157,13 +176,15 @@ function translateDocument(document, program, template, module, name, displayNam
 }
 
 function translateBody(body, program, template, name, displayName) {
-    program.add("var $" + name + " = function " + displayName + "(body, caller, $ARGUMENT) {\n");
+    program.add("var $" + name + " = function " + displayName + "(body, caller) {\n");
     var bodyProgram = program.indent();
     program.add("};\n");
+
     // Trailing inheritance declarations
     if (template.extends) {
         program.add("$THIS.prototype = Object.create($SUPER.prototype);\n");
         program.add("$THIS.prototype.constructor = $THIS;\n");
+        program.add("$THIS.prototype.exports = " + JSON.stringify(template.exportNames) + ";\n");
     }
 
     // Call super constructor
@@ -173,7 +194,9 @@ function translateBody(body, program, template, name, displayName) {
 
     // Establish the component and its scope
     bodyProgram.add("var document = body.ownerDocument;\n");
-    bodyProgram.add("var scope = this.scope = caller.root.nest();\n");
+    bodyProgram.add("var scope = this.scope = caller.root.nestComponents();\n");
+    // caller is the argument scope
+    // caller.argument is the argument template(s)
     bodyProgram.add("scope.caller = caller;\n");
     bodyProgram.add("scope.this = this;\n");
 
@@ -196,7 +219,7 @@ function translateBody(body, program, template, name, displayName) {
 }
 
 function translateArgument(node, program, template, name, displayName, significantSpace) {
-    program.add("var $" + name + " = function " + displayName + "(body, caller, $ARGUMENT) {\n");
+    program.add("var $" + name + " = function " + displayName + "(body, caller) {\n");
     var argumentProgram = program.indent();
     argumentProgram.add("var document = body.ownerDocument;\n");
     argumentProgram.add("var scope = this.scope = caller;\n");
@@ -212,7 +235,7 @@ function translateArgument(node, program, template, name, displayName, significa
 }
 
 function translateSegment(node, program, template, name, displayName, significantSpace) {
-    var header = program.add("var parent = body, parents = [], node, component, componentScope, argument;\n");
+    var header = program.add("var parent = body, parents = [], node, component, callee, argument;\n");
     var unused = translateFragment(
         node,
         program.addSection("fragment"),
@@ -284,14 +307,22 @@ function translateElement(node, program, template, name, displayName, significan
 
     var component;
     if (argumentTag && argumentTag.module.parameter) {
-        negotiateArgument(node, argumentTag, argumentTag.module.parameter, program, template, name, displayName);
+        negotiateArgument(
+            node,
+            argumentTag,
+            argumentTag.module.parameter,
+            program,
+            template,
+            name,
+            displayName
+        );
     } else {
         component = program.add("component = node;\n");
     }
 
     // Introduce new component or node to its owner.
     if (id) {
-        program.add("scope[" + JSON.stringify(id) + "] = component;\n");
+        program.add("scope.components[" + JSON.stringify(id) + "] = component;\n");
         program.add("if (scope.this.add) {\n");
         program.add("    scope.this.add(component, " + JSON.stringify(id) + ", scope);\n");
         program.add("}\n");
@@ -312,7 +343,7 @@ function translateElement(node, program, template, name, displayName, significan
         program.push();
         translateFragment(
             node,
-            program.addSection("fragment"),
+            program.indent(node.tagName),
             template,
             name,
             displayName,
@@ -324,6 +355,9 @@ function translateElement(node, program, template, name, displayName, significan
 
 function negotiateArgument(node, argument, parameter, program, template, name, displayName) {
     program.push();
+    var argumentProgram = program.indent(node.tagName);
+    program.pop();
+    program = argumentProgram;
 
     program.add("node = {};\n");
     if (parameter.type === "text") {
@@ -344,20 +378,23 @@ function negotiateArgument(node, argument, parameter, program, template, name, d
         }
     }
 
-    var id = node.getAttribute("id");
-
     // Pass the scope back to the caller
+    var name;
     if (argument.type === "argument") {
         // Instantiate an argument from the template that instantiated this.
-        program.add("componentScope = scope.caller;\n");
-        program.add("component = new " + argument.name + ".component(parent, componentScope, node, " + JSON.stringify(id) + ");\n");
+        program.add("callee = scope.caller.nest();\n");
+        name = argument.name + ".component";
     } else if (argument.type === "external") {
         // Pass a chunk of our own template to an external component.
-        program.add("componentScope = scope;\n");
-        program.add("component = new $" + node.tagName.toUpperCase() + "(parent, componentScope, node, " + JSON.stringify(id) + ");\n");
+        program.add("callee = scope.nest();\n");
+        program.add("callee.argument = node;\n");
+        name = "$" + node.tagName.toUpperCase()
     }
 
-    program.pop();
+    var id = node.getAttribute("id");
+    program.add("callee.id = " + JSON.stringify(id) + ";\n");
+    program.add("component = new " + name + "(parent, callee);\n");
+
 }
 
 function defineComponent(node, program, template, name, displayName) {
@@ -377,6 +414,7 @@ function defineComponent(node, program, template, name, displayName) {
 
 function Template() {
     this.tags = {};
+    this.exportNames = {};
     this.nextArgumentIndex = 0;
 }
 

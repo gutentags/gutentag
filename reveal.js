@@ -1,14 +1,17 @@
 "use strict";
 
+// TODO create scope for revealed body and add to owner whenever it is created.
+// Destroy when retracted, recreate when revealed.
+
 var O = require("pop-observe");
 
 module.exports = Reveal;
-function Reveal(body, scope, argument) {
+function Reveal(body, scope) {
     this.value = false;
     this.observer = O.observePropertyChange(this, "value", this);
     this.body = body;
     this.scope = scope;
-    this.childConstructor = argument.component;
+    this.childConstructor = scope.argument.component;
     this.child = null;
     this.childBody = null;
 }

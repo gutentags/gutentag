@@ -5,14 +5,15 @@ function Essay() {
 }
 
 Essay.prototype.add = function (child, id, scope) {
+    var components = scope.components;
     if (id === "buttons:iteration") {
-        scope.button.actualNode.dataset.value = child.value;
-        scope.button.actualNode.addEventListener("click", this);
-        scope.buttonLabel.value = child.value;
+        components.button.actualNode.dataset.value = child.value;
+        components.button.actualNode.addEventListener("click", this);
+        components.buttonLabel.value = child.value;
     } else if (id === "this") {
-        this.buttons = scope.buttons;
-        this.buttons.value = Object.keys(scope.choose.optionConstructors);
-        this.choose = scope.choose;
+        this.buttons = components.buttons;
+        this.buttons.value = Object.keys(components.choose.optionConstructors);
+        this.choose = components.choose;
     }
 };
 

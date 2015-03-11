@@ -23,11 +23,11 @@ Essay.prototype.add = function (child, id, scope) {
         child.actualNode.addEventListener("click", this);
     }
     if (id === "children:iteration") {
-        scope.child.value = child.value;
+        scope.components.child.value = child.value;
     } else if (id === "this") {
-        this.children = scope.children;
-        this.label = scope.label;
-        scope.revealSub.value = !!scope.caller.this;
+        this.children = scope.components.children;
+        this.label = scope.components.label;
+        scope.components.revealSub.value = !!scope.caller.this;
     }
 
 };

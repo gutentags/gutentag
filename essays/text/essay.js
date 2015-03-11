@@ -6,9 +6,10 @@ function Essay() {
 }
 
 Essay.prototype.add = function (child, id, scope) {
+    var components = scope.components;
     if (id === "this") {
-        scope.greeting.value = "Guten Tag, Welt!";
-        scope.display.actualNode.addEventListener("change", this);
+        components.greeting.value = "Guten Tag, Welt!";
+        components.display.actualNode.addEventListener("change", this);
     }
 };
 
@@ -22,6 +23,6 @@ Object.defineProperty(Essay.prototype, "value", {
     },
     set: function (value) {
         this._value = value;
-        this.scope.greeting.value = value ? "Guten Tag, Welt!" : null;
+        this.scope.components.greeting.value = value ? "Guten Tag, Welt!" : null;
     }
 });

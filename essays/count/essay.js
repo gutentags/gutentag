@@ -7,11 +7,11 @@ function Essay() {
 
 Essay.prototype.add = function (child, id, scope) {
     if (id === "this") {
-        this.repeat = scope.repeat;
-        scope.repeat.value = this.value;
-        scope.rotate.actualNode.addEventListener("click", this);
+        this.repeat = scope.components.repeat;
+        scope.components.repeat.value = this.value;
+        scope.components.rotate.actualNode.addEventListener("click", this);
     } else if (id === "repeat:iteration") {
-        scope.text.value = child.value;
+        scope.components.text.value = child.value;
     }
 };
 

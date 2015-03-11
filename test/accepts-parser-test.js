@@ -60,6 +60,36 @@ it("named implicit body", function () {
     });
 });
 
+it("option as name", function () {
+    expect(parse("x:y")).toEqual({
+        type: "options",
+        options: {
+            x: {
+                type: "body",
+                name: "x",
+                as: "y"
+            }
+        }
+    });
+});
+
+it("plural option as name", function () {
+    expect(parse("x:y*")).toEqual({
+        type: "options",
+        options: {
+            x: {
+                type: "multiple",
+                of: {
+                    type: "body",
+                    name: "x"
+                },
+                name: "x",
+                as: "y"
+            }
+        }
+    });
+});
+
 it("tag within tag", function () {
     expect(parse("a(b)")).toEqual({
         type: "options",

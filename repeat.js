@@ -5,12 +5,12 @@ var swap = require("pop-swap");
 var empty = [];
 
 module.exports = Repetition;
-function Repetition(body, scope, argument, id) {
+function Repetition(body, scope) {
     this.body = body;
     this.scope = scope;
     this.iterations = [];
-    this.Iteration = argument.component;
-    this.id = id;
+    this.Iteration = scope.argument.component;
+    this.id = scope.id;
     this.observer = null;
     this._value = null;
     this.value = [];
@@ -35,7 +35,6 @@ Object.defineProperty(Repetition.prototype, "value", {
 });
 
 Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
-    var scope = this.scope;
     var body = this.body;
     var document = this.body.ownerDocument;
 
@@ -55,18 +54,25 @@ Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
 
     swap(this.iterations, index, minus.length, plus.map(function (value, offset) {
         var iterationNode = document.createBody();
-        var iterationScope = scope.nest();
+        var iterationScope = this.scope.nestComponents();
 
         var iteration = new this.Iteration(iterationNode, iterationScope);
         iteration.value = value;
         iteration.index = index + offset;
         iteration.body = iterationNode;
 
-        var id = this.id + ":iteration";
-        iterationScope[id] = iteration;
-        if (scope.this.add) {
-            scope.this.add(iteration, id, iterationScope);
-        }
+        var name = "iteration";
+        var scope = this.scope;
+        do {
+            var id = scope.id + ":" + name;
+            iterationScope[id] = iteration;
+            if (scope.this.add) {
+                scope.this.add(iteration, id, iterationScope);
+            }
+            name = scope.this.exports && scope.this.exports[id];
+            scope = scope.caller;
+            iterationScope = iterationScope.caller;
+        } while (name);
 
         body.insertBefore(iterationNode, nextSibling);
         return iteration;
@@ -89,5 +95,6 @@ Repetition.prototype.redraw = function (region) {
 
 Repetition.prototype.destroy = function () {
     this.observer.cancel();
+    this.handleValuesRangeChange([], this._value, 0);
 };
 
