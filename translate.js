@@ -99,7 +99,7 @@ function analyzeHead(head, program, template, module) {
                         var href = child.getAttribute("href");
                         var as = child.getAttribute("as");
                         if (!as) {
-                            as = /([^\/]+)\.html$/.exec(href);
+                            as = /([^\/]+)\.(?:html|xml)$/.exec(href);
                             as = as[1];
                         }
                         as = as.toUpperCase();
