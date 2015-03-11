@@ -24,14 +24,17 @@ tags
     }
 
 tag
-    = _ name:name tree:tree plural:"*"? {
+    = _ name:name as:(":" name)? tree:tree plural:"*"? {
         tree.name = name;
         if (plural) {
-            return {
+            tree = {
                 type: "multiple",
                 of: tree,
                 name: tree.name
             }
+        }
+        if (as) {
+            tree.as = as[1];
         }
         return tree;
     }
