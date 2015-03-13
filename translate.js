@@ -349,18 +349,25 @@ function constructArgument(node, argument, parameter, program, template, name, d
     var name;
     var id = node.getAttribute("id");
     if (argument.type === "argument") {
-        // Instantiate an argument from the template that instantiated this.
-        program.add("callee = scope.caller.nest();\n");
         name = argument.name + ".component";
+        program.add("callee = scope.caller.nest();\n");
+        program.add("if (" + argument.name + ") {\n");
+        program.add("    callee.id = " + JSON.stringify(id) + ";\n");
+        program.add("    component = new " + name + "(parent, callee);\n");
+        // Default template fallback if optional component not provided.
+        program.add("} else {\n");
+        program.add("    component = new node.component(parent, scope);\n");
+        program.add("}\n");
+        // Instantiate an argument from the template that instantiated this.
     } else if (argument.type === "external") {
         // Pass a chunk of our own template to an external component.
         program.add("callee = scope.nest();\n");
         program.add("callee.argument = node;\n");
         name = "$" + node.tagName.toUpperCase()
+        program.add("callee.id = " + JSON.stringify(id) + ";\n");
+        program.add("component = new " + name + "(parent, callee);\n");
     }
 
-    program.add("callee.id = " + JSON.stringify(id) + ";\n");
-    program.add("component = new " + name + "(parent, callee);\n");
 }
 
 function Template() {

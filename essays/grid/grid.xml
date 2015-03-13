@@ -12,7 +12,7 @@
         <table>
             <thead>
                 <tr id="columnRow">
-                    <th><corner/></th>
+                    <th><corner>×</corner></th>
                     <repeat id="columns">
                         <th><ch><text id="ch"/></ch></th>
                     </repeat>
