@@ -1,10 +1,12 @@
-<!-- the following is a fungible motivating use case as yet -->
 <html>
     <head>
         <link rel="extends" href="./grid"/>
-        <link rel="tag" href="./repeat.html"/>
-        <link rel="tag" href="./text.html"/>
+        <link rel="tag" href="../../repeat.html"/>
+        <link rel="tag" href="../../text.html"/>
         <meta accepts="corner ch rh cd"/>
+        <meta exports="columns:iteration" as="ch"/>
+        <meta exports="rows:iteration" as="rh"/>
+        <meta exports="cells:iteration" as="cd"/>
     </head>
     <body>
         <table>
@@ -18,10 +20,12 @@
             </thead>
             <tbody>
                 <repeat id="rows">
-                    <th><rh><text id="rh"/></rh></th>
-                    <repeat id="cells">
-                        <td><cd><text id="cd"/></cd></td>
-                    </repeat>
+                    <tr>
+                        <th><rh><text id="rh"/></rh></th>
+                        <repeat id="cells">
+                            <td><cd><text id="cd"/></cd></td>
+                        </repeat>
+                    </tr>
                 </repeat>
             </tbody>
         </table>

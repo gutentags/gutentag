@@ -7,9 +7,10 @@
 var Q = require("q");
 var domenic = require("domenic");
 var parser = new domenic.DOMParser();
-var innerText = require("./dom/inner-text");
 var Program = require("./program");
 var parseAccepts = require("./accepts-parser").parse;
+var translateParameter = require("./translate-parameter");
+var negotiateArgument = require("./translate-argument");
 
 module.exports = function translate(module, type) {
     var trim = 0;
@@ -116,29 +117,12 @@ function analyzeHead(head, program, template, module) {
                         var syntax = parseAccepts(accepts);
                         var parameter = {};
                         module.parameter = syntax;
-                        if (syntax.type === "body") {
-                            var as = child.getAttribute("as") || "argument";
-                            template.addTag(as.toUpperCase(), {
-                                type: "argument",
-                                name: "callee.argument",
-                                module: {parameter: {}}
-                            });
-                        } else if (syntax.type === "options") {
-                            // TODO factor this out
-                            Object.keys(syntax.options).forEach(function (tagName) {
-                                var option = syntax.options[tagName];
-                                var as = option.as || tagName;
-                                if (option.type === "body") {
-                                    template.addTag(as.toUpperCase(), {
-                                        type: "argument",
-                                        name: "callee.argument." + tagName,
-                                        module: {parameter: {}}
-                                    });
-                                } else {
-                                    // TODO
-                                }
-                            });
-                        }
+                        translateParameter(
+                            syntax,
+                            template,
+                            "callee.argument",
+                            child.getAttribute("as") || "argument"
+                        );
                     } else if (child.getAttribute("exports")) {
                         var name = child.getAttribute("exports");
                         var as = child.getAttribute("as");
@@ -307,7 +291,7 @@ function translateElement(node, program, template, name, displayName, significan
 
     var component;
     if (argumentTag && argumentTag.module.parameter) {
-        negotiateArgument(
+        constructArgument(
             node,
             argumentTag,
             argumentTag.module.parameter,
@@ -353,33 +337,17 @@ function translateElement(node, program, template, name, displayName, significan
     }
 }
 
-function negotiateArgument(node, argument, parameter, program, template, name, displayName) {
+function constructArgument(node, argument, parameter, program, template, name, displayName) {
     program.push();
     var argumentProgram = program.indent(node.tagName);
     program.pop();
     program = argumentProgram;
 
-    program.add("node = {};\n");
-    if (parameter.type === "text") {
-        program.add("node.innerText = " + JSON.stringify(innerText(node)) + ";\n");
-    } else if (parameter.type === "html") {
-        program.add("node.innerHTML = " + JSON.stringify(node.innerHTML) + ";\n");
-    } else if (parameter.type === "body") {
-        var argumentName = defineComponent(node, program, template, name, displayName);
-        program.add("node.component = $" + argumentName + ";\n");
-    } else if (parameter.type === "entries") {
-        var child = node.firstChild;
-        while (child) {
-            if (child.nodeType === 1) {
-                var argumentName = defineComponent(child, program, template, name, displayName);
-                program.add("node[" + JSON.stringify(child.tagName.toLowerCase()) + "] = $" + argumentName + ";\n");
-            }
-            child = child.nextSibling;
-        }
-    }
+    negotiateArgument(node, parameter, program, template, name, displayName);
 
     // Pass the scope back to the caller
     var name;
+    var id = node.getAttribute("id");
     if (argument.type === "argument") {
         // Instantiate an argument from the template that instantiated this.
         program.add("callee = scope.caller.nest();\n");
@@ -391,25 +359,8 @@ function negotiateArgument(node, argument, parameter, program, template, name, d
         name = "$" + node.tagName.toUpperCase()
     }
 
-    var id = node.getAttribute("id");
     program.add("callee.id = " + JSON.stringify(id) + ";\n");
     program.add("component = new " + name + "(parent, callee);\n");
-
-}
-
-function defineComponent(node, program, template, name, displayName) {
-    var argumentProgram = program.ownerDocument.documentElement.addSection("argument");
-    var argumentSuffix = "$" + (template.nextArgumentIndex++);
-    var argumentName = name + argumentSuffix;
-    var argumentDisplayName = displayName + argumentSuffix;
-    translateArgument(
-        node,
-        argumentProgram.addSection("argument"),
-        template,
-        argumentName,
-        argumentDisplayName
-    );
-    return argumentName;
 }
 
 function Template() {
@@ -429,3 +380,20 @@ Template.prototype.hasTag = function (name) {
 Template.prototype.getTag = function (name) {
     return this.tags[name];
 };
+
+Template.prototype.defineComponent =
+function defineComponent(node, program, name, displayName) {
+    var argumentProgram = program.ownerDocument.documentElement.addSection("argument");
+    var argumentSuffix = "$" + (this.nextArgumentIndex++);
+    var argumentName = name + argumentSuffix;
+    var argumentDisplayName = displayName + argumentSuffix;
+    translateArgument(
+        node,
+        argumentProgram.addSection("argument"),
+        this,
+        argumentName,
+        argumentDisplayName
+    );
+    return argumentName;
+}
+

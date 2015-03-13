@@ -2,7 +2,7 @@
 
 module.exports = Choose;
 function Choose(body, scope) {
-    this.optionConstructors = scope.argument;
+    this.optionConstructors = scope.argument.children;
     this.options = {};
     this.bodies = {};
     this.body = body;

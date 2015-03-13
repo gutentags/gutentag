@@ -12,27 +12,13 @@ tags
             options: options
         };
     }
-    / tree:tree plural:"*"? {
-        if (plural) {
-            return {
-                type: "multiple",
-                of: tree,
-                name: tree.name
-            }
-        }
+    / tree:tree {
         return tree;
     }
 
 tag
     = _ name:name as:(":" name)? tree:tree plural:"*"? {
         tree.name = name;
-        if (plural) {
-            tree = {
-                type: "multiple",
-                of: tree,
-                name: tree.name
-            }
-        }
         if (as) {
             tree.as = as[1];
         }
@@ -47,11 +33,7 @@ tree
         }
     }
     / "(" _ tags:tags _ ")" {
-        return {
-            type: "children",
-            name: null,
-            children: tags
-        };
+        return tags;
     }
     / "" {
         return {

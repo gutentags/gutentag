@@ -60,6 +60,30 @@ it("named implicit body", function () {
     });
 });
 
+it("named implicit body", function () {
+    expect(parse("rh ch cd corner")).toEqual({
+        type: "options",
+        options: {
+            rh: {
+                type: "body",
+                name: "rh"
+            },
+            ch: {
+                type: "body",
+                name: "ch"
+            },
+            cd: {
+                type: "body",
+                name: "cd"
+            },
+            corner: {
+                type: "body",
+                name: "corner"
+            }
+        }
+    });
+});
+
 it("option as name", function () {
     expect(parse("x:y")).toEqual({
         type: "options",
@@ -73,37 +97,17 @@ it("option as name", function () {
     });
 });
 
-it("plural option as name", function () {
-    expect(parse("x:y*")).toEqual({
-        type: "options",
-        options: {
-            x: {
-                type: "multiple",
-                of: {
-                    type: "body",
-                    name: "x"
-                },
-                name: "x",
-                as: "y"
-            }
-        }
-    });
-});
-
 it("tag within tag", function () {
     expect(parse("a(b)")).toEqual({
         type: "options",
         options: {
             a: {
-                type: "children",
+                type: "options",
                 name: "a",
-                children: {
-                    type: "options",
-                    options: {
-                        b: {
-                            type: "body",
-                            name: "b"
-                        }
+                options: {
+                    b: {
+                        type: "body",
+                        name: "b"
                     }
                 }
             }
@@ -131,54 +135,23 @@ it("promise", function () {
     });
 });
 
-it("plural option", function () {
-    expect(parse("option[text]*")).toEqual({
-        type: "options",
-        options: {
-            option: {
-                type: "multiple",
-                of: {
-                    type: "text",
-                    name: "option"
-                },
-                name: "option"
-            }
-        }
-    });
-});
-
 it("select", function () {
-    expect(parse("option[text]* optgroup(option[text]*)*")).toEqual({
+    expect(parse("option[text] optgroup(option[text])")).toEqual({
         type: "options",
         options: {
             option: {
-                type: "multiple",
-                of: {
-                    type: "text",
-                    name: "option"
-                },
+                type: "text",
                 name: "option"
             },
             optgroup: {
-                type: "multiple",
-                of: {
-                    type: "children",
-                    name: "optgroup",
-                    children: {
-                        type: "options",
-                        options: {
-                            option: {
-                                type: "multiple",
-                                of: {
-                                    type: "text",
-                                    name: "option"
-                                },
-                                name: "option"
-                            }
-                        }
+                type: "options",
+                name: "optgroup",
+                options: {
+                    option: {
+                        type: "text",
+                        name: "option"
                     }
-                },
-                name: "optgroup"
+                }
             }
         }
     });
