@@ -1,6 +1,6 @@
 "use strict";
 
-var Document = require("./dom");
+var Document = require("wizdom");
 
 module.exports = Program;
 function Program() {

@@ -107,7 +107,7 @@ The first component on the page does not accept an argument, so you just create
 a body and a scope.
 
 ```js
-var Document = require("gutentag/dom-body");
+var Document = require("koerper");
 var Scope = require("gutentag/scope");
 var List = require("./list.html");
 
@@ -484,7 +484,11 @@ Every node of the virtual document has an `actualNode` and proxies common DOM
 methods and properties including `innerHTML`, `innerText`, `getAttribute`,
 `setAttribute`, `hasAttribute`, and `removeAttribute`, but does not emulate
 anything fancy.
-Just use `actualNode`
+
+The virtual document, with its support for body nodes, is provided by the
+[Koerper] module.
+
+[Koerper]: https://github.com/kriskowal/koerper
 
 ## License and Copyright
 

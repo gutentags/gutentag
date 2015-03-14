@@ -1,6 +1,6 @@
 "use strict";
 
-var innerText = require("./dom/inner-text");
+var innerText = require("wizdom/inner-text");
 
 module.exports = translateArgument;
 function translateArgument(node, parameter, program, template, name, displayName) {

@@ -32,9 +32,11 @@
   },
   "dependencies": {
     "domenic": "0.0.0",
+    "koerper": "^1.0.1",
     "mr": "^2.0.5",
     "pop-observe": "^2.0.1",
     "pop-swap": "^1.0.0",
-    "q": "^2.0.3"
+    "q": "^2.0.3",
+    "wizdom": "^1.0.0"
   }
 }

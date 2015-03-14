@@ -3,7 +3,7 @@
 var Scope = require("../scope");
 var DOMParser = require("domenic").DOMParser;
 var Essay = require("./text.html");
-var Document = require("../dom-body");
+var Document = require("koerper");
 
 var parser = new DOMParser();
 var actualDocument = parser.parseFromString("<!doctype html><html><body></body></html>", "text/html");
