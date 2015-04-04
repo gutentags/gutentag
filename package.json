@@ -18,7 +18,7 @@
   "homepage": "https://github.com/kriskowal/gutentag",
   "devDependencies": {
     "jasminum": "^2.0.5",
-    "pegjs": "git://github.com/dmajda/pegjs",
+    "pegjs": "^0.8.0",
     "uglify-js": "^2.4.16"
   },
   "translators": {
