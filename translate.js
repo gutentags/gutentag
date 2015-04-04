@@ -52,7 +52,6 @@ module.exports = function translate(module, type) {
             displayName
         );
         module.text = program.digest();
-        console.log(module.text);
     });
 };
 
