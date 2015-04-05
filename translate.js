@@ -22,7 +22,7 @@ module.exports = function translate(module, type) {
         throw new Error("Can't translate type " + JSON.stringify(type) + " Use text/html or application/xml");
     }
     var displayName = module.display.slice(0, module.display.length - trim).split(/[#\/]/g).map(function (part) {
-        part = part.replace(/[^\w\d]/g, "");
+        part = part.replace(/[^a-zA-Z0-9]/g, "");
         return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
     }).join("");
     if (!/[A-Z]/.test(displayName[0])) {
@@ -76,7 +76,7 @@ function analyzeDocument(document, program, template, module) {
 }
 
 function analyzeHead(head, program, template, module) {
-    template.addTag("THIS", {type: "external", module: module});
+    template.addTag("THIS", {type: "external", module: module, name: "THIS"});
     module.parameter = {};
     if (head) {
         var child = head.firstChild;
@@ -90,7 +90,7 @@ function analyzeHead(head, program, template, module) {
                         program.add("var $SUPER = require" + "(" + JSON.stringify(href) + ");\n");
                         module.dependencies.push(href);
                         template.extends = true;
-                        template.addTag("SUPER", {type: "super"});
+                        template.addTag("SUPER", {type: "super", name: "SUPER"});
                     } else if (rel === "exports") {
                         var href = child.getAttribute("href");
                         template.exports = href;
@@ -103,11 +103,12 @@ function analyzeHead(head, program, template, module) {
                             as = as[1];
                         }
                         as = as.toUpperCase();
+                        var name = as.replace(/[^A-Za-z0-9_]/g, '_');
                         // TODO validate identifier
-                        program.add("var $" + as + " = require" + "(" + JSON.stringify(href) + ");\n");
+                        program.add("var $" + name + " = require" + "(" + JSON.stringify(href) + ");\n");
                         module.neededTags[as] = href;
                         module.dependencies.push(href);
-                        template.addTag(as, {type: "external", id: href});
+                        template.addTag(as, {type: "external", id: href, name: name});
                     }
                     // ...
                 } else if (child.tagName.toLowerCase() === "meta") {
@@ -362,7 +363,7 @@ function constructArgument(node, argument, parameter, program, template, name, d
         // Pass a chunk of our own template to an external component.
         program.add("callee = scope.nest();\n");
         program.add("callee.argument = node;\n");
-        name = "$" + node.tagName.toUpperCase()
+        name = "$" + argument.name;
         program.add("callee.id = " + JSON.stringify(id) + ";\n");
         program.add("component = new " + name + "(parent, callee);\n");
     }
