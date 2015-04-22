@@ -16,6 +16,15 @@
     "url": "https://github.com/kriskowal/gutentag/issues"
   },
   "homepage": "https://github.com/kriskowal/gutentag",
+  "dependencies": {
+    "domenic": "^1.0.1",
+    "koerper": "^1.0.5",
+    "mr": "^2.0.5",
+    "pop-observe": "^2.0.1",
+    "pop-swap": "^1.0.0",
+    "q": "^2.0.3",
+    "wizdom": "^1.0.0"
+  },
   "devDependencies": {
     "jasminum": "^2.0.5",
     "pegjs": "^0.8.0",
@@ -29,14 +38,5 @@
     "test": "jasminum test",
     "build-parser": "pegjs --allowed-start-rules tags accepts-parser.pegjs",
     "build": "mrs essays/text/index.js | uglifyjs > essays/text/bundle.js"
-  },
-  "dependencies": {
-    "domenic": "0.0.0",
-    "koerper": "^1.0.2",
-    "mr": "^2.0.5",
-    "pop-observe": "^2.0.1",
-    "pop-swap": "^1.0.0",
-    "q": "^2.0.3",
-    "wizdom": "^1.0.0"
   }
 }
