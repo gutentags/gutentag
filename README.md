@@ -9,9 +9,10 @@ one.
 The "Guten Tag, Welt!" application is about 15K and 3K after uglify and gzip.
 These are not yesterday's web components.
 
-A tag is defined in HTML and can import tags from other HTML modules.
+A tag is defined in HTML or XML and can import tags from other HTML modules.
 This `list.html` tag produces a list at whatever point in a document you
 incorporate it.
+An instance of a tag is a component.
 
 ```html
 <!doctype html>
@@ -29,9 +30,9 @@ incorporate it.
 </html>
 ```
 
-A JavaScript module, `list.js`, connects the tags inside the list. The HTML
-module exports a constructor for the module and calls into the `add` method
-of the underlying JavaScript implementation, if it exists.
+A JavaScript module, `list.js`, connects the components of the list.
+The HTML module exports a constructor for the module and calls into the `add`
+method of the underlying JavaScript implementation, if it exists.
 
 ```js
 'use strict';
@@ -46,8 +47,8 @@ List.prototype.add = function (child, id, scope) {
 };
 ```
 
-Trivial tags can live without an underlying JavaScript implementation. Instead
-of calling `add`, they just use the identifier of each tag to define a
+Trivial tags can live without an underlying JavaScript implementation.
+Instead of calling `add`, they just use the identifier of each tag to define a
 property of the tag instance.
 
 Although tags can manage their children, the first tag on a page has to be
@@ -55,13 +56,13 @@ added to the document manually.
 To do so requires some minimal understanding of the tag calling convention.
 
 A tag module exports a constructor.
-The constructor accepts a `body`, `scope`, and an optional `argument`.
+The constructor accepts a `body` and a `caller` scope.
 
 ```
 "use strict";
 module.exports = Component;
-function Component(body, scope, argument) {
-    this.scope = scope.root.nest();
+function Component(body, caller) {
+    this.scope = caller.root.nestComponents();
     body.appendChild(document.createTextNode("Guten Tag, Welt!\n"));
 }
 ```
@@ -71,99 +72,192 @@ It represents a point in the actual document that the given tag will control.
 Bodies can be added and removed from the virtual document, and all of their
 content will be added or removed from the actual document.
 However, bodies do not introduce a container element, like a `<div>`.
-This is critical for all of the building blocks that Gutentag provides since
-there are cases where you would want more than one of these inline.
+This is critical for the Gutenttag structural tags, `<repeat>`, `<reveal>`, and
+`<choose>`, since you may or may not need a container element around them or
+inside them, and you may want one or more of these inline.
+
+```html
+<table>
+    <tr>
+        <th><!-- corner --></th>
+        <th id="groupOneHeader" colspan=""></th>
+        <th id="groupTwoHeader" colspan=""></th>
+    </tr>
+    <tr>
+        <th><text id="rowHeader"></text></th>
+        <repeat id="groupOne">
+            <td><text id="cell"></text></td>
+        </repeat>
+        <repeat id="groupTwo">
+            <td><text id="cell"></text></td>
+        </repeat>
+    </tr>
+</table>
+```
+
 In other cases where having a wrapper element would interfere with CSS
-selectors, particularly for the flex model.
+selectors, particularly for the flex model, or to preserve semantic markup.
 
-The `scope` is an object that captures components by their id along its
-prototype chain.
-The root scope has a `root` property that refers to itself, so `scope.root` will
-always give you this empty scope object.
-Every scope has a `nest()` method that returns an object that inherits
-prototypically from its creator.
-Tag components use `scope.root.nest()` to create a new lexical environment such
-that `scope.this` refers to the component.
-The repeat tag uses `scope.nest()` to create new scopes for each iteration, and
-names the iteration after the repetition's identifier, plus ":iteration", so
-`scope['items:iteration']` would give you access to the iteration object for the
-``<repeat id="items">`` repetition.
-
-Components create a body with `body.ownerDocument.createBody()`, add that
-body to their own document, and pass it as the first argument of a child
-component constructor.
-They pass their own scope as the second argument.
-Depending on how the child component accepts arguments, it will construct an
-appropriate `argument` object from the document between their start and end tag,
-and pass that as the third argument.
-
-```js
-var childBody = body.ownerDocument.createBody();
-body.appendChild(childBody);
-var component = new Component(childBody, scope, argument);
+```html
+<repeat id="stanzas"><p class="stanza">
+    <repeat id="lines">
+        <text id="line"></text>
+        <reveal id="medial"><br></reveal>
+    </repeat>
+</p></repeat>
 ```
 
-The first component on the page does not accept an argument, so you just create
-a body and a scope.
+Sometimes it is useful to compose text without container elements at all.
 
-```js
-var Document = require("koerper");
-var Scope = require("gutentag/scope");
-var List = require("./list.html");
-
-var scope = new Scope();
-var document = new Document(window.document.body);
-var list = new List(document.documentElement, scope);
-list.items.value = ['Guten', 'Tag,', 'Welt!'];
+```html
+<sp><text id="hello">, <text id="person">!</sp>
 ```
 
-Tags require a module system that can load these HTML modules.
-Version 2 of [Mr][] supports to-JavaScript translator modules and enables
-dependencies to inherit these translators.
+The `caller` object is a scope container that inherits properties along its
+prototype chain up to the root scope.
+This makes the root scope object an ideal container for dependency injection.
+The `scope.root` refers to that root scope from any descendant scope.
+Each scope also has a direct reference to its `scope.parent`.
 
-```
-npm install mr@2 --save-dev
-```
+In a component, `scope.this` will always refer to the component instantiated by
+containing tag document.
+So, in `foo.html`, `scope.this` is the containing instance of the `Foo`
+component.
+The `scope.components` object maps component identifiers in that scope to their
+corresponding component instance.
 
-[Mr]: https://github.com/kriskowal/mr
-
-The gutentags package.json exports translators for "html" and "xml" and any
-package that depends on gutentags inherits these.
-
-```json
-{
-  "translators": {
-    "html": "./translate-html",
-    "xml": "./translate-xml"
-  }
-}
-```
-
-Importantly, the module loader allows tags to inspect the headers of the tags
-they depend upon, particularly to figure out what kind of argument they accept.
-
-During development, Mr supports loading modules installed by npm without a build
-step, provided that the packages are compatible (no support for directories with
-an implicit `index.js`) and that the modules have not been deduped (with `npm
-dedupe`).
+Every subcomponent has a scope, but many scopes share the same
+`scope.components`.
+The body of an HTML tag is the root of a lexical scope and introduces an empty
+`scope.components` object to which each child component adds itslef.
+In this example, the `scope.components` object will have `hello` and `person`
+components.
+Note that Gutentags trim implied white space between tags and the `<sp>` special
+tag notes explicit template text.
 
 ```html
 <!doctype html>
 <html>
     <head>
-        <script src="node_modules/mr/boot.js" data-module="index">
-        </script>
+        <link rel="tag" href="gutentag/text.html">
     </head>
     <body>
+        <text id="hello"></text><sp>, </sp>
+        <text id="person">!
     </body>
 </html>
+```
+
+The Gutentag building blocks, `<repeat>`, `<reveal>`, and `<choose>` create
+child scopes that introduce a new `scope.components` object that inherits
+prototypically from the containing scope's components,
+`scope.parent.components`.
+In this example, the "hello" and "person" components are each within a
+"greetings:iteration" component and have access to `scope.components.header`,
+but from the perspective of the "header", it is in a scope by itself.
+
+```html
+<!doctype html>
+<html>
+    <head>
+        <link rel="tag" href="gutentag/text.html">
+        <link rel="tag" href="gutentag/repeat.html">
+    </head>
+    <body>
+        <h1><text id="header"></h1>
+        <repeat id="greetings">
+            <text id="hello"></text><sp>, </sp>
+            <text id="person">!
+        </repeat>
+    </body>
+</html>
+```
+
+Each scope may also have a `scope.caller` property, referring to the lexical
+scope of the tag that instantiated this component, and a `scope.argument`
+referring to a template for the content of the instantiating tag.
+
+Instantiating a tag from within a tag also passes its inner content as a
+template in the form requested by that tag through its `<meta accepts>` header.
+For example, `text.html` has `<meta accepts="[text]">`, `repeat.html` has `<meta
+accepts="[body]">`, and `choose.html` has `<meta accepts="[entries]">`.
+Each of these packs the content into `caller.argument` in the fashion expected
+by the component.
+
+## Bootstrapping
+
+Every Gutentag application starts with an npm package.
+You will need a `package.json`.
+Use `npm init` to create one.
+
+You will also need copies of the module system and Gutentag installed locally.
+Tags require a module system that can load these HTML modules.
+Version 2 of [Mr][] supports to-JavaScript translator modules and enables
+dependencies to inherit these translators.
+During development, Mr supports loading modules installed by npm without a build
+step, provided that the packages are compatible (no support for directories with
+an implicit `index.js`) and that the modules have not been deduped (with `npm
+dedupe`).
+
+[Mr]: https://github.com/kriskowal/mr
+
+```
+$ npm init
+$ npm install --save mr@2
+$ npm install --save koerper
+$ npm install --save gutentag
+```
+
+To enable Mr to load Gutentag HTML or XML files, add a "translators" annotation
+to `package.json`.
+
+```json
+{
+  "translators": {
+    "html": "gutentag/translate-html",
+    "xml": "gutentag/translate-xml"
+  }
+}
+```
+
+A Gutentag application starts with a boilerplate `index.html`.
+This HTML is suitable for debugging locally with your favorite web server.
+Refreshing the page reloads all modules without incurring a build step.
+You have the option of using this page as a loading screen if your application
+takes a significant amount of time to load.
+It also would host all of your metadata and assets like icons and CSS themes.
+
+```html
+<!doctype html>
+<html>
+    <head>
+    </head>
+    <body>
+        <script src="node_modules/mr/boot.js" data-module="index"></script>
+    </body>
+</html>
+```
+
+The HTML calls into the Mr bootstrapping script which in turn loads the entry
+module, `index.js`.
+This boilerplate module just creates a virtual document, a root scope, and the
+root component.
+
+```js
+var Document = require("koerper");
+var Scope = require("gutentag/scope");
+var App = require("app.html");
+
+var scope = new Scope();
+var document = new Document(window.document.body);
+var app = new App(document.documentElement, scope);
 ```
 
 To bundle up your modules for production, Mr also provides a tool called Mrs,
 that operates like Browserify and generates a bundle.
 Mrs translates all of the HTML modules into JavaScript and bundles a very
 minimal module system.
-You can add a build step to your package.json.
+You can add a build step to your package.json and run it with `npm run build`.
 
 ```
 {
@@ -172,6 +266,13 @@ You can add a build step to your package.json.
   }
 }
 ```
+
+For my the debut Gutentag application, there is a [build script][BuildTengwar]
+that rolls up the bundled HTML and CSS directly to a `gh-pages` branch, suitable
+for pushing to Github.
+
+[BuildTengwar]: https://github.com/gutentags/tengwar.html/blob/master/build-gh-pages.sh
+
 
 ## Tags
 
@@ -264,9 +365,10 @@ The iteration object has an `index` and a `value` property.
 'use strict';
 module.exports = List;
 function List() {}
-List.prototype.add = function (child, id, scope) {
+List.prototype.add = function (component, id, scope) {
+    var components = scope.components;
     if (id === "items:iteration") {
-        scope.text.value = child.value;
+        components.text.value = component.value;
     }
 };
 ```
@@ -298,10 +400,10 @@ Reveals its content based on whether `value` is truthy.
 'use strict';
 module.exports = Blink;
 function Blink() {}
-Blink.prototype.add = function (child, id) {
+Blink.prototype.add = function (component, id) {
     if (id === "content") {
         setInterval(function () {
-            child.value = !child.value;
+            component.value = !component.value;
         }, 1000);
     }
 }
@@ -369,18 +471,29 @@ If your package defines a single tag like `autocomplete.html`, name your package
 Invoking a tag in another tag may use the content between the start and end tag
 in various ways to pass an argument into the called tag.
 Tags must express how they receive their argument.
-Note that the following API is subject to radical change before version 1.
 
 -   ``<meta accepts="[body]">`` receive the entire argument as a component.
     The argument is instantiable in HTML tag definitions as the ``<argument>``
     tag.
+
+    Use `caller.argument.component`, which is a component constructor.
+
 -   ``<meta accepts="[entries]">`` receive each of the child nodes as a named
     argument component. The component constructor will receive an object with
     named properties for each component.
+
+    Use `caller.argument.children`, which is an object mapping the name of the
+    child tag to a component constructor.
+
 -   ``<meta accepts="[text]">`` receives the entire argument as a string
     from its `innerText`.
+
+    Use `caller.argument.innerText` to access the caller template's inner text.
+
 -   ``<meta accepts="[html]">`` receives the entire argument as a string
     from its `innerHTML`.
+
+    Use `caller.argument.innerHTML` to access the caller templates inner HTML.
 
 For example, this tag parenthesizes its argument.
 
@@ -392,6 +505,76 @@ For example, this tag parenthesizes its argument.
     </head>
     <body>(<argument></argument>)</body>
 </html>
+```
+
+The `caller.argument` object will also have a `tagName`.
+In a future version, it may also support attributes and a language for matching
+other DOM patterns.
+
+### Arguments and Scopes
+
+The building block components, `<repeat>`, `<reveal>`, and `<choose>` all create
+a child scope for the components instantiated by their inner template.
+This has interesting implications for arguments instantiated within that scope.
+Consider a `<list>` tag that contains a repetition and accepts an argument
+component for each row.
+
+```html
+<!doctype html>
+<html>
+    <head>
+        <link rel="extends" href="./list">
+        <link rel="tag" href="gutentag/repeat.html">
+        <meta accepts="[body]" as="row">
+        <meta exports="rows:iteration" as="row">
+    </head>
+    <body>
+        <ul><repeat id="rows">
+            <li><row></row></li>
+        </repeat></ul>
+    </body>
+</html>
+```
+
+Another component instantiates the list with a text component in each row.
+
+```html
+<!doctype html>
+<html>
+    <head>
+        <link rel="extends" href="./essay">
+        <link rel="tag" href="gutentag/text.html">
+        <link rel="tag" href="./list.html">
+    </head>
+    <body>
+        <list id="items">
+            <text id="item"></text>
+        </list>
+    </body>
+</html>
+```
+
+In the list component, each row is known as "rows:iteration".
+However, the repetition also cuts through the transitive caller scopes
+creating a new scope for instantiated arguments.
+In this case, the list component creates an "items:row" iteration
+based on the name of the caller ("items") and name exported by the list
+("rows:iteration" gets exported as "row").
+
+Thus, from within this essay, we observe the instantiation of "items:row" and
+can see the value of the iteration.
+
+```js
+module.exports = Essay;
+function Essay() {}
+Essay.prototype.add = function (child, id, scope) {
+    var components = scope.components;
+    if (id === "items:row") {
+        components.item.value = child.value;
+    } else if (id === "this") {
+        components.items.value = ["Guten Tag, Welt!", "Auf Widerseh'n, Welt!"];
+    }
+};
 ```
 
 ### This
