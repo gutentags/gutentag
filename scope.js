@@ -18,3 +18,17 @@ Scope.prototype.nestComponents = function () {
     child.components = Object.create(this.components);
     return child;
 };
+
+Scope.prototype.add = function (component, name, scope) {
+    var componentScope = this;
+    do {
+        var id = scope.id + ":" + name;
+        componentScope[id] = component;
+        if (scope.this.add) {
+            scope.this.add(component, id, componentScope);
+        }
+        name = scope.this.exports && scope.this.exports[id];
+        scope = scope.caller;
+        componentScope = componentScope.caller;
+    } while (name);
+};

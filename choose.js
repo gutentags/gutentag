@@ -2,9 +2,10 @@
 
 module.exports = Choose;
 function Choose(body, scope) {
-    this.optionConstructors = scope.argument.children;
-    this.options = {};
-    this.bodies = {};
+    this.choices = scope.argument.children;
+    this.choice = null;
+    this.choiceBody = null;
+    this.choiceScope = null;
     this.body = body;
     this.scope = scope;
     this._value = null;
@@ -15,25 +16,30 @@ Object.defineProperty(Choose.prototype, "value", {
         return this._value;
     },
     set: function (value) {
-        this.constructOption(value);
-        if (this.value !== null && value !== this._value) {
-            this.body.removeChild(this.bodies[this._value]);
+        if (!this.choices[value]) {
+            throw new Error("Can't switch to non-existant option");
         }
-        this.body.appendChild(this.bodies[value]);
+
+        if (value === this._value) {
+            return;
+        }
         this._value = value;
+
+        if (this.choice) {
+            if (this.choice.destroy) {
+                this.choice.destroy();
+            }
+            this.body.removeChild(this.choiceBody);
+        }
+
+        this.choiceBody = this.body.ownerDocument.createBody();
+        this.choiceScope = this.scope.nestComponents();
+        this.choice = new this.choices[value](this.choiceBody, this.choiceScope);
+        this.choiceScope.add(this.choice, value, this.scope);
+        this.body.appendChild(this.choiceBody);
     }
 });
 
-Choose.prototype.constructOption = function (value) {
-    if (!this.optionConstructors[value]) {
-        throw new Error("Can't switch to non-existant option");
-    }
-    if (!this.options[value]) {
-        var constructor = this.optionConstructors[value];
-        this.bodies[value] = this.body.ownerDocument.createBody();
-        this.options[value] = new constructor(this.bodies[value], this.scope);
-    }
-};
 
 Choose.prototype.destroy = function () {
     for (var name in this.options) {

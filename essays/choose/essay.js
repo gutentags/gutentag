@@ -12,7 +12,7 @@ Essay.prototype.add = function (child, id, scope) {
         components.buttonLabel.value = child.value;
     } else if (id === "this") {
         this.buttons = components.buttons;
-        this.buttons.value = Object.keys(components.choose.optionConstructors);
+        this.buttons.value = Object.keys(components.choose.choices);
         this.choose = components.choose;
     }
 };
