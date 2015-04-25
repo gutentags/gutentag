@@ -7,7 +7,6 @@ modules written in HTML.
 Bring your own bindings, shims, data, animation, or virtual document if you need
 one.
 The "Guten Tag, Welt!" application is about 15K and 3K after uglify and gzip.
-These are not yesterday's web components.
 
 A tag is defined in HTML or XML and can import tags from other HTML modules.
 This `list.html` tag produces a list at whatever point in a document you
