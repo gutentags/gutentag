@@ -408,6 +408,9 @@ Blink.prototype.add = function (component, id) {
 }
 ```
 
+A `<reveal id="content">` tag instantiates its inner content in a
+`content:revelation` scope each time it reveals that content.
+
 Take a peek at essay/reveal.
 
 ### choose.html
@@ -431,7 +434,7 @@ Constructs the children on demand.
                 <text id="buttonLabel">—</text>
             </button>
         </repeat>
-        <choose id="choose">
+        <choose id="options">
             <a>Police</a>
             <b>Officer</b>
             <c>Wolves</c>
@@ -445,6 +448,11 @@ Constructs the children on demand.
 ```js
 choose.value = "e";
 ```
+
+A `<choose id="options">` tag instantiates one of its choices in a fresh scope
+each time its value changes.
+The name of that scope comes from the identifier of the component and the given
+value, so the iteration would be called "options:e" in this case.
 
 Take a peek at essays/choose.
 
