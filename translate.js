@@ -168,8 +168,8 @@ function translateBody(body, program, template, name, displayName) {
     if (template.extends) {
         program.add("$THIS.prototype = Object.create($SUPER.prototype);\n");
         program.add("$THIS.prototype.constructor = $THIS;\n");
-        program.add("$THIS.prototype.exports = " + JSON.stringify(template.exportNames) + ";\n");
     }
+    program.add("$THIS.prototype.exports = " + JSON.stringify(template.exportNames) + ";\n");
 
     // Call super constructor
     if (template.extends) {
@@ -196,10 +196,7 @@ function translateBody(body, program, template, name, displayName) {
 
     // Note "this" in scope.
     // This is a good hook for final wiring.
-    bodyProgram.add("if (this.add) {\n");
-    bodyProgram.add("    this.add(this, \"this\", this.scope);\n");
-    bodyProgram.add("}\n");
-
+    bodyProgram.add("this.scope.set(\"this\", this);\n");
 }
 
 function translateArgument(node, program, template, name, displayName, significantSpace) {
@@ -306,10 +303,7 @@ function translateElement(node, program, template, name, displayName, significan
 
     // Introduce new component or node to its owner.
     if (id) {
-        program.add("scope.components[" + JSON.stringify(id) + "] = component;\n");
-        program.add("if (scope.this.add) {\n");
-        program.add("    scope.this.add(component, " + JSON.stringify(id) + ", scope);\n");
-        program.add("}\n");
+        program.add("scope.set(" + JSON.stringify(id) + ", component);\n");
     } else if (component) {
         program.removeChild(component);
     }

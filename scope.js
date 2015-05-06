@@ -19,16 +19,17 @@ Scope.prototype.nestComponents = function () {
     return child;
 };
 
-Scope.prototype.add = function (component, name, scope) {
-    var componentScope = this;
-    do {
-        var id = scope.id + ":" + name;
-        componentScope[id] = component;
-        if (scope.this.add) {
-            scope.this.add(component, id, componentScope);
-        }
-        name = scope.this.exports && scope.this.exports[id];
-        scope = scope.caller;
-        componentScope = componentScope.caller;
-    } while (name);
+Scope.prototype.set = function (id, component) {
+    var scope = this;
+    scope.components[id] = component;
+
+    if (scope.this.add) {
+        scope.this.add(component, id, scope);
+    }
+
+    var exportId = scope.this.exports && scope.this.exports[id];
+    if (exportId) {
+        var callerId = scope.caller.id;
+        scope.caller.set(callerId + ":" + exportId, component);
+    }
 };

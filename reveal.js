@@ -30,7 +30,7 @@ Reveal.prototype.handleValuePropertyChange = function (value) {
         this.revelationScope = this.scope.nestComponents();
         this.revelationBody = this.body.ownerDocument.createBody();
         this.revelation = new this.Revelation(this.revelationBody, this.revelationScope);
-        this.revelationScope.add(this.revelation, "revelation", this.scope);
+        this.revelationScope.set(this.scope.id + ":revelation", this.revelation);
         this.body.appendChild(this.revelationBody);
     }
 };

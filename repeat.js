@@ -61,7 +61,7 @@ Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
         iteration.index = index + offset;
         iteration.body = iterationNode;
 
-        iterationScope.add(iteration, "iteration", this.scope);
+        iterationScope.set(this.scope.id + ":iteration", iteration);
 
         body.insertBefore(iterationNode, nextSibling);
         return iteration;
