@@ -2,10 +2,38 @@
 Guten Tag!
 ===========
 
-This package provides building blocks for creating and using HTML tags for
-modules written in HTML.
+A guten tag is an HTML or XML file that defines a template for instantiating a
+combination of JavaScript components and DOM elements.
+Guten tags export a component constructor and can import other component
+constructors, binding them to tag names in the scope of a document.
+The markup translates to JavaScript, on-the-fly in the browser during
+development, or in Node.js as a build step.
+In this examle, we import the `<repeat>` and `<text>` tags from guten tag
+modules.
+
+```html
+<head>
+    <link rel="extends" href="./list">
+    <link rel="tag" href="gutentag/repeat.html">
+    <link rel="tag" href="gutentag/text.html">
+</head>
+```
+
+Guten tags have a lexical scope for component and element identifiers, and can
+introduce components into caller scopes under the identifier of the caller.
+In this example, there is a repetition with an id of "items" that introduces
+"items:iteration" in the iteration scopes from the body of the repetition.
+
+```html
+<ul><repeat id="items">
+    <li id="item" type="a"><text id="text"></text></li>
+</repeat></ul>
+```
+
+Guten tag only provides the `<text>`, `<html>`, `<repeat>`, `<reveal>`, and
+`<choose>` tags and the system for loading tags.
 Bring your own bindings, shims, data, animation, or virtual document if you need
-one.
+them.
 The "Guten Tag, Welt!" application is about 15K and 3K after uglify and gzip.
 
 A tag is defined in HTML or XML and can import tags from other HTML modules.
@@ -47,14 +75,8 @@ List.prototype.add = function (child, id, scope) {
 ```
 
 Trivial tags can live without an underlying JavaScript implementation.
-Instead of calling `add`, they just use the identifier of each tag to define a
-property of the tag instance.
 
-Although tags can manage their children, the first tag on a page has to be
-added to the document manually.
-To do so requires some minimal understanding of the tag calling convention.
-
-A tag module exports a constructor.
+Tags modules compile to JavaScript that export a component constructor..
 The constructor accepts a `body` and a `caller` scope.
 
 ```
@@ -69,7 +91,7 @@ function Component(body, caller) {
 The `body` is a special kind of node in a virtual document.
 It represents a point in the actual document that the given tag will control.
 Bodies can be added and removed from the virtual document, and all of their
-content will be added or removed from the actual document.
+content will be (synchronously) added or removed from the actual document.
 However, bodies do not introduce a container element, like a `<div>`.
 This is critical for the Gutenttag structural tags, `<repeat>`, `<reveal>`, and
 `<choose>`, since you may or may not need a container element around them or
@@ -94,8 +116,8 @@ inside them, and you may want one or more of these inline.
 </table>
 ```
 
-In other cases where having a wrapper element would interfere with CSS
-selectors, particularly for the flex model, or to preserve semantic markup.
+In other cases, having a wrapper element would interfere with CSS selectors,
+particularly for the flex model, or would interfere with semantic markup.
 
 ```html
 <repeat id="stanzas"><p class="stanza">
