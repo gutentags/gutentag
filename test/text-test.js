@@ -1,14 +1,15 @@
 "use strict";
 
-var mr = require("mr");
-var url = require("url");
+var System = require("system");
+var Location = require("system/location");
+var URL = require("url");
 
 it("", function () {
-    var location = mr.directoryPathToLocation(__dirname);
-    var packageLocation = url.resolve(location, "..");
-    return mr.loadPackage(packageLocation)
-    .then(function (gutentag) {
-        return gutentag.async("test/text");
+    var location = Location.fromDirectory(__dirname);
+    var packageLocation = URL.resolve(location, "..");
+    return System.load(packageLocation)
+    .then(function (system) {
+        return system.import("./test/text");
     })
     .thenResolve();
 });

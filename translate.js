@@ -21,7 +21,7 @@ module.exports = function translate(module, type) {
     } else {
         throw new Error("Can't translate type " + JSON.stringify(type) + " Use text/html or application/xml");
     }
-    var displayName = module.display.slice(0, module.display.length - trim).split(/[#\/]/g).map(function (part) {
+    var displayName = module.filename.slice(0, module.filename.length - trim).split(/[#\/]/g).map(function (part) {
         part = part.replace(/[^a-zA-Z0-9]/g, "");
         return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
     }).join("");
@@ -33,14 +33,13 @@ module.exports = function translate(module, type) {
     var section = program.documentElement;
     var template = new Template();
     section.add('"use strict";\n');
-    module.dependencies = [];
     module.neededTags = {};
     analyzeDocument(document, section, template, module);
     return Q.all(Object.keys(module.neededTags).map(function (name) {
         var href = module.neededTags[name];
-        return module.require.load(href)
+        return module.system.load(href, module.id)
         .then(function () {
-            template.getTag(name).module = module.require.lookup(href);
+            template.getTag(name).module = module.system.lookup(href, module.id);
         });
     })).then(function () {
         translateDocument(

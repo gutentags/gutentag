@@ -213,18 +213,17 @@ Use `npm init` to create one.
 
 You will also need copies of the module system and Gutentag installed locally.
 Tags require a module system that can load these HTML modules.
-Version 2 of [Mr][] supports to-JavaScript translator modules and enables
-dependencies to inherit these translators.
-During development, Mr supports loading modules installed by npm without a build
-step, provided that the packages are compatible (no support for directories with
-an implicit `index.js`) and that the modules have not been deduped (with `npm
-dedupe`).
+The [System][] loader supports to-JavaScript translator modules.
+During development, System supports loading modules installed by npm without a
+build step, provided that the packages are compatible (no support for
+directories with an implicit `index.js`) and that the modules have not been
+deduped (with `npm dedupe`).
 
-[Mr]: https://github.com/kriskowal/mr
+[System]: https://github.com/gutentags/system
 
 ```
 $ npm init
-$ npm install --save mr@2
+$ npm install --save system
 $ npm install --save koerper
 $ npm install --save gutentag
 ```
@@ -254,7 +253,7 @@ It also would host all of your metadata and assets like icons and CSS themes.
     <head>
     </head>
     <body>
-        <script src="node_modules/mr/boot.js" data-module="index"></script>
+        <script src="node_modules/system/boot.js" data-import="./index"></script>
     </body>
 </html>
 ```
@@ -274,21 +273,21 @@ var document = new Document(window.document.body);
 var app = new App(document.documentElement, scope);
 ```
 
-To bundle up your modules for production, Mr also provides a tool called Mrs,
-that operates like Browserify and generates a bundle.
-Mrs translates all of the HTML modules into JavaScript and bundles a very
+To bundle up your modules for production, System also provides a tool called
+Bundle, that operates like Browserify and generates a bundle.
+Bundle translates all of the HTML modules into JavaScript and bundles a very
 minimal module system.
 You can add a build step to your package.json and run it with `npm run build`.
 
 ```
 {
   "scripts": {
-    "build": "mrs index.js | uglifyjs > bundle.js"
+    "build": "bundle index.js | uglifyjs > bundle.js"
   }
 }
 ```
 
-For my the debut Gutentag application, there is a [build script][BuildTengwar]
+For my debut Gutentag application, there is a [build script][BuildTengwar]
 that rolls up the bundled HTML and CSS directly to a `gh-pages` branch, suitable
 for pushing to Github.
 
