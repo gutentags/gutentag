@@ -66,8 +66,11 @@ function analyzeDocument(document, program, template, module) {
     var child = document.documentElement.firstChild;
     while (child) {
         if (child.nodeType === 1 /* ELEMENT_NODE */) {
-            if (child.tagName.toLowerCase() === "head") {
+            var tagName = child.tagName.toLowerCase();
+            if (tagName === "head") {
                 analyzeHead(child, program, template, module);
+            } else if (tagName === "body") {
+                analyzeElement(child, program, template, module);
             }
         }
         child = child.nextSibling;
@@ -82,23 +85,23 @@ function analyzeHead(head, program, template, module) {
         while (child) {
             // TODO constants do not exist in minidom
             if (child.nodeType === 1 /* ELEMENT_NODE */) {
-                if (child.tagName.toLowerCase() === "link") {
+                var tagName = child.tagName.toLowerCase();
+                if (tagName === "link") {
                     var rel = child.getAttribute("rel");
+                    var href = child.getAttribute("href");
                     if (rel === "extends") {
-                        var href = child.getAttribute("href");
                         program.add("var $SUPER = require" + "(" + JSON.stringify(href) + ");\n");
                         module.dependencies.push(href);
                         template.extends = true;
                         template.addTag("SUPER", {type: "super", name: "SUPER"});
                     } else if (rel === "exports") {
-                        var href = child.getAttribute("href");
-                        template.exports = href;
                         module.dependencies.push(href);
+                        template.exports = href;
                     } else if (rel === "tag") {
-                        var href = child.getAttribute("href");
+                        module.dependencies.push(href);
                         var as = child.getAttribute("as");
                         if (!as) {
-                            as = /([^\/]+)\.(?:html|xml)$/.exec(href);
+                            as = /([^\/]+)(?:\.html|\.xml)$/.exec(href);
                             as = as[1];
                         }
                         as = as.toUpperCase();
@@ -106,11 +109,10 @@ function analyzeHead(head, program, template, module) {
                         // TODO validate identifier
                         program.add("var $" + name + " = require" + "(" + JSON.stringify(href) + ");\n");
                         module.neededTags[as] = href;
-                        module.dependencies.push(href);
                         template.addTag(as, {type: "external", id: href, name: name});
                     }
                     // ...
-                } else if (child.tagName.toLowerCase() === "meta") {
+                } else if (tagName === "meta") {
                     if (child.getAttribute("accepts")) {
                         var accepts = child.getAttribute("accepts");
                         var syntax = parseAccepts(accepts);
@@ -132,6 +134,21 @@ function analyzeHead(head, program, template, module) {
             }
             child = child.nextSibling;
         }
+    }
+}
+
+function analyzeElement(element, program, template, module) {
+    var child = element.firstChild;
+    while (child) {
+        if (child.nodeType === 1 /* ELEMENT_NODE */) {
+            var href = element.getAttribute("href");
+            if (href != null && href !== "") {
+                module.dependencies.push(href);
+            }
+            // TODO src for resources
+            analyzeElement(child, program, template, module);
+        }
+        child = child.nextSibling;
     }
 }
 
