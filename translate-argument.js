@@ -22,15 +22,23 @@ function translateArgument(node, parameter, program, template, name, displayName
             if (child.nodeType === 1) {
                 program.push();
                 var childProgram = program.indent(child.tagName);
+                var tagName = child.tagName.toLowerCase();
+                var quotedTagName = JSON.stringify(tagName);
+                var option = parameter.options[tagName];
                 translateArgument(
                     child,
-                    parameter.options[child.tagName.toLowerCase()],
+                    option,
                     childProgram,
                     template,
                     name,
                     displayName
                 );
-                childProgram.add("parent.children[" + JSON.stringify(child.tagName.toLowerCase()) + "] = node;\n");
+                if (option.plural) {
+                    childProgram.add("parent.children[" + quotedTagName + "] = parent.children[" + quotedTagName + "] || [];\n");
+                    childProgram.add("parent.children[" + quotedTagName + "].push(node);\n");
+                } else {
+                    childProgram.add("parent.children[" + quotedTagName + "] = node;\n");
+                }
                 program.pop();
             }
             child = child.nextSibling;
