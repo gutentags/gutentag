@@ -20,9 +20,6 @@ Object.defineProperty(Choose.prototype, "value", {
             throw new Error("Can't switch to non-existant option");
         }
 
-        if (value === this._value) {
-            return;
-        }
         this._value = value;
 
         if (this.choice) {
@@ -39,7 +36,6 @@ Object.defineProperty(Choose.prototype, "value", {
         this.body.appendChild(this.choiceBody);
     }
 });
-
 
 Choose.prototype.destroy = function () {
     for (var name in this.options) {
