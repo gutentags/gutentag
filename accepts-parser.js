@@ -58,7 +58,9 @@ module.exports = (function() {
         peg$c10 = { type: "literal", value: "*", description: "\"*\"" },
         peg$c11 = function(name, as, tree, plural) {
                 tree.name = name;
-                tree.plural = plural;
+                if (plural) {
+                    tree.plural = plural;
+                }
                 if (as) {
                     tree.as = as[1];
                 }

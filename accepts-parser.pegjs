@@ -19,7 +19,9 @@ tags
 tag
     = _ name:name as:(":" name)? tree:tree plural:"*"? {
         tree.name = name;
-        tree.plural = plural;
+        if (plural) {
+            tree.plural = plural;
+        }
         if (as) {
             tree.as = as[1];
         }
