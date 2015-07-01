@@ -3,14 +3,14 @@
 var innerText = require("wizdom/inner-text");
 
 module.exports = translateArgument;
-function translateArgument(node, parameter, program, template, name, displayName) {
+function translateArgument(node, parameter, program, scope, template, name, displayName) {
     program.add("node = {tagName: " + JSON.stringify(node.tagName.toLowerCase()) + "};\n");
     if (parameter.type === "entries") {
         program.add("node.children = {};\n");
         var child = node.firstChild;
         while (child) {
             if (child.nodeType === 1) {
-                var argumentName = template.defineComponent(child, program, name, displayName);
+                var argumentName = template.defineComponent(child, program, scope, name, displayName);
                 program.add("node.children[" + JSON.stringify(child.tagName.toLowerCase()) + "] = $" + argumentName + ";\n");
             }
             child = child.nextSibling;
@@ -29,6 +29,7 @@ function translateArgument(node, parameter, program, template, name, displayName
                     child,
                     option,
                     childProgram,
+                    scope,
                     template,
                     name,
                     displayName
@@ -48,7 +49,7 @@ function translateArgument(node, parameter, program, template, name, displayName
     } else if (parameter.type === "html") {
         program.add("node.innerHTML = " + JSON.stringify(node.innerHTML) + ";\n");
     } else { // if (parameter.type === "body") {
-        var argumentName = template.defineComponent(node, program, name, displayName);
+        var argumentName = template.defineComponent(node, program, scope, name, displayName);
         program.add("node.component = $" + argumentName + ";\n");
     }
 }

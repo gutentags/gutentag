@@ -23,7 +23,7 @@
     "pop-swap": "^1.0.0",
     "q": "^2.0.3",
     "system": "^1.0.0",
-    "wizdom": "^1.0.0"
+    "wizdom": "^1.1.0"
   },
   "devDependencies": {
     "jasminum": "^2.0.5",

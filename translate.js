@@ -11,6 +11,7 @@ var Program = require("./program");
 var parseAccepts = require("./accepts-parser").parse;
 var translateParameter = require("./translate-parameter");
 var negotiateArgument = require("./translate-argument");
+var Scope = require("./scope");
 
 module.exports = function translate(module, type) {
     var trim = 0;
@@ -200,10 +201,16 @@ function translateBody(body, program, template, name, displayName) {
     bodyProgram.add("scope.caller = caller;\n");
     bodyProgram.add("scope.this = this;\n");
 
+    var root = new Scope();
+    var scope = root.nest();
+    scope.significantSpace = false;
+    scope.namespace = null;
+
     // Build out the body
     translateSegment(
         body,
         bodyProgram.addSection("segment"),
+        scope,
         template,
         name,
         displayName,
@@ -215,7 +222,8 @@ function translateBody(body, program, template, name, displayName) {
     bodyProgram.add("this.scope.set(\"this\", this);\n");
 }
 
-function translateArgument(node, program, template, name, displayName, significantSpace) {
+function translateArgument(node, program, scope, template, name, displayName) {
+    var scope; // TODO
     program.add("var $" + name + " = function " + displayName + "(body, caller) {\n");
     var argumentProgram = program.indent();
     argumentProgram.add("var document = body.ownerDocument;\n");
@@ -223,30 +231,30 @@ function translateArgument(node, program, template, name, displayName, significa
     translateSegment(
         node,
         argumentProgram.addSection("segment"),
+        scope,
         template,
         name,
-        displayName,
-        significantSpace
+        displayName
     );
     program.add("};\n");
 }
 
-function translateSegment(node, program, template, name, displayName, significantSpace) {
+function translateSegment(node, program, scope, template, name, displayName) {
     var header = program.add("var parent = body, parents = [], node, component, callee, argument;\n");
     var unused = translateFragment(
         node,
         program.addSection("fragment"),
+        scope,
         template,
         name,
-        displayName,
-        significantSpace
+        displayName
     );
     if (unused) {
         program.removeChild(header);
     }
 }
 
-function translateFragment(node, program, template, name, displayName, significantSpace) {
+function translateFragment(node, program, scope, template, name, displayName) {
     var child = node.firstChild;
     var text;
     var unused = true;
@@ -255,15 +263,15 @@ function translateFragment(node, program, template, name, displayName, significa
             translateElement(
                 child,
                 program.addSection("element"),
+                scope,
                 template,
                 name,
-                displayName,
-                significantSpace
+                displayName
             );
             unused = false;
         } else if (child.nodeType === 3 /*domenic.Element.TEXT_NODE*/) {
             text = child.nodeValue;
-            if (significantSpace) {
+            if (scope.significantSpace) {
                 text = text.replace(/[\s\n]+/g, " ");
             } else {
                 text = text.trim();
@@ -278,24 +286,33 @@ function translateFragment(node, program, template, name, displayName, significa
     return unused;
 }
 
-function translateElement(node, program, template, name, displayName, significantSpace) {
+function translateElement(node, program, caller, template, name, displayName) {
     var id = node.getAttribute("id");
     var tagName = node.tagName.toUpperCase();
     var argumentTag = template.getTag(tagName);
 
+    var callee = caller.nest();
+    callee.namespace = node.getAttribute("xmlns") || caller.namespace;
+
     if (tagName === "SP") {
+        callee.significantSpace = true;
         return translateFragment(
             node,
             program.addSection("fragment"),
+            callee,
             template,
             name,
-            displayName,
-            true
+            displayName
         );
     }
 
     if (argumentTag) {
         program.add("node = document.createBody();\n");
+    } else if (callee.namespace) {
+        program.add("node = document.createElementNS(" +
+            JSON.stringify(callee.namespace) + ", " +
+            JSON.stringify(node.tagName) + ");\n"
+        );
     } else {
         program.add("node = document.createElement(" + JSON.stringify(node.tagName) + ");\n");
     }
@@ -309,6 +326,7 @@ function translateElement(node, program, template, name, displayName, significan
             argumentTag,
             argumentTag.module.parameter,
             program,
+            callee,
             template,
             name,
             displayName
@@ -329,7 +347,7 @@ function translateElement(node, program, template, name, displayName, significan
             attribute = attributes.item(index);
             key = attribute.nodeName;
             value = attribute.value || node.nodeValue;
-            if (key === "id") {
+            if (key === "id" || key === "xmlns") {
                 continue;
             }
             program.add("node.setAttribute(" + JSON.stringify(key) + ", " + JSON.stringify(value) + ");\n");
@@ -338,22 +356,22 @@ function translateElement(node, program, template, name, displayName, significan
         translateFragment(
             node,
             program.indent(node.tagName),
+            callee,
             template,
             name,
-            displayName,
-            significantSpace
+            displayName
         );
         program.pop();
     }
 }
 
-function constructArgument(node, argument, parameter, program, template, name, displayName) {
+function constructArgument(node, argument, parameter, program, scope, template, name, displayName) {
     program.push();
     var argumentProgram = program.indent(node.tagName);
     program.pop();
     program = argumentProgram;
 
-    negotiateArgument(node, parameter, program, template, name, displayName);
+    negotiateArgument(node, parameter, program, scope, template, name, displayName);
 
     // Pass the scope back to the caller
     var name;
@@ -399,7 +417,7 @@ Template.prototype.getTag = function (name) {
 };
 
 Template.prototype.defineComponent =
-function defineComponent(node, program, name, displayName) {
+function defineComponent(node, program, scope, name, displayName) {
     var argumentProgram = program.ownerDocument.documentElement.addSection("argument");
     var argumentSuffix = "$" + (this.nextArgumentIndex++);
     var argumentName = name + argumentSuffix;
@@ -407,6 +425,7 @@ function defineComponent(node, program, name, displayName) {
     translateArgument(
         node,
         argumentProgram.addSection("argument"),
+        scope,
         this,
         argumentName,
         argumentDisplayName
