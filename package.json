@@ -37,6 +37,7 @@
   "scripts": {
     "test": "jasminum test",
     "build-parser": "pegjs --allowed-start-rules tags accepts-parser.pegjs",
+    "build-boot": "bundle boot-entry.js > boot.js",
     "build": "bundle essays/text/index.js | uglifyjs > essays/text/bundle.js"
   }
 }
