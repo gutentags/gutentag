@@ -11,33 +11,35 @@ function Reveal(body, scope) {
     this.observer = O.observePropertyChange(this, "value", this);
     this.body = body;
     this.scope = scope;
-    this.Revelation = scope.argument.component;
-    this.revelation = null;
-    this.revelationBody = null;
-    this.revelationScope = null;
+    this.Component = scope.argument.component;
+    this.component = null;
+    this.componentBody = null;
+    this.componentScope = null;
 }
 
 Reveal.prototype.handleValuePropertyChange = function (value) {
-    if (this.revelation) {
-        if (this.revelation.destroy) {
-            this.revelation.destroy();
-        }
-        this.body.removeChild(this.revelationBody);
-        this.revelation = null;
-        this.revelationBody = null;
-    }
+    this.clear();
     if (value) {
-        this.revelationScope = this.scope.nestComponents();
-        this.revelationBody = this.body.ownerDocument.createBody();
-        this.revelation = new this.Revelation(this.revelationBody, this.revelationScope);
-        this.revelationScope.set(this.scope.id + ":revelation", this.revelation);
-        this.body.appendChild(this.revelationBody);
+        this.componentScope = this.scope.nestComponents();
+        this.componentBody = this.body.ownerDocument.createBody();
+        this.component = new this.Component(this.componentBody, this.componentScope);
+        this.componentScope.set(this.scope.id + ":revelation", this.component);
+        this.body.appendChild(this.componentBody);
+    }
+};
+
+Reveal.prototype.clear = function clear() {
+    if (this.component) {
+        if (this.component.destroy) {
+            this.component.destroy();
+        }
+        this.body.removeChild(this.componentBody);
+        this.component = null;
+        this.componentBody = null;
     }
 };
 
 Reveal.prototype.destroy = function () {
-    if (this.revelation.destroy) {
-        this.revelation.destroy();
-    }
+    this.clear();
     this.observer.cancel();
 };
