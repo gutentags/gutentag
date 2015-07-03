@@ -18,7 +18,7 @@
   "homepage": "https://github.com/kriskowal/gutentag",
   "dependencies": {
     "domenic": "^1.0.1",
-    "koerper": "^1.0.5",
+    "koerper": "^1.1.0",
     "pop-observe": "^2.0.1",
     "pop-swap": "^1.0.0",
     "q": "^2.0.3",
