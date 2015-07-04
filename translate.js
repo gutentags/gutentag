@@ -332,7 +332,7 @@ function translateElement(node, program, caller, template, name, displayName) {
             displayName
         );
     } else {
-        component = program.add("component = node;\n");
+        component = program.add("component = node.actualNode;\n");
     }
 
     // Introduce new component or node to its owner.

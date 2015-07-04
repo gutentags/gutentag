@@ -19,8 +19,8 @@ Object.defineProperty(Essay.prototype, "value", {
 
 Essay.prototype.add = function (child, id, scope) {
     if (child.tagName === "BUTTON") {
-        child.actualNode.dataset.action = id;
-        child.actualNode.addEventListener("click", this);
+        child.dataset.action = id;
+        child.addEventListener("click", this);
     }
     if (id === "children:iteration") {
         scope.components.child.value = child.value;

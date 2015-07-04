@@ -7,7 +7,7 @@ function Essay() {
 
 Essay.prototype.add = function (child, id, scope) {
     if (id === "this") {
-        scope.components.display.actualNode.addEventListener("change", this);
+        scope.components.display.addEventListener("change", this);
     }
 }
 

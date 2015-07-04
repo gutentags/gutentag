@@ -9,7 +9,7 @@ Essay.prototype.add = function (child, id, scope) {
     if (id === "this") {
         this.repeat = scope.components.repeat;
         scope.components.repeat.value = this.value;
-        scope.components.rotate.actualNode.addEventListener("click", this);
+        scope.components.rotate.addEventListener("click", this);
     } else if (id === "repeat:iteration") {
         scope.components.text.value = child.value;
     }

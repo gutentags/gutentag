@@ -15,8 +15,8 @@ Main.prototype.add = function add(component, id, scope) {
         scope.components.ticks60.value = this.ticks60;
         scope.components.ticks12.value = this.ticks12;
     } else if (id === "ticks60:iteration") {
-        scope.components.tick.actualNode.style.transform = "translate(200px, 200px) rotate(" + component.value + "deg) translateY(180px)";
+        scope.components.tick.style.transform = "translate(200px, 200px) rotate(" + component.value + "deg) translateY(180px)";
     } else if (id === "ticks12:iteration") {
-        scope.components.tick.actualNode.style.transform = "translate(200px, 200px) rotate(" + component.value + "deg) translateY(180px)";
+        scope.components.tick.style.transform = "translate(200px, 200px) rotate(" + component.value + "deg) translateY(180px)";
     }
 };

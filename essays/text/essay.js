@@ -9,7 +9,7 @@ Essay.prototype.add = function (child, id, scope) {
     var components = scope.components;
     if (id === "this") {
         components.greeting.value = "Guten Tag, Welt!";
-        components.display.actualNode.addEventListener("change", this);
+        components.display.addEventListener("change", this);
     }
 };
 
