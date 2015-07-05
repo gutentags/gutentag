@@ -332,14 +332,12 @@ function translateElement(node, program, caller, template, name, displayName) {
             displayName
         );
     } else {
-        component = program.add("component = node.actualNode;\n");
+        program.add("component = node.actualNode;\n");
     }
 
     // Introduce new component or node to its owner.
     if (id) {
         program.add("scope.set(" + JSON.stringify(id) + ", component);\n");
-    } else if (component) {
-        program.removeChild(component);
     }
 
     if (!argumentTag) {
@@ -347,10 +345,23 @@ function translateElement(node, program, caller, template, name, displayName) {
             attribute = attributes.item(index);
             key = attribute.nodeName;
             value = attribute.value || node.nodeValue;
-            if (key === "id" || key === "xmlns") {
-                continue;
+            if (key === "id") {
+                var uid = id + "_" + ((0x7FFFFFFF * Math.random()) | 0).toString(36);
+                program.add("node.setAttribute(\"id\", " + JSON.stringify(uid) + ");\n");
+                // If a label precedes the element it refers to
+                program.add("if (scope.componentsFor[" + JSON.stringify(value) + "]) {\n");
+                program.add("   scope.componentsFor[" + JSON.stringify(value) + "].setAttribute(\"for\", " + JSON.stringify(uid) + ")\n");
+                program.add("}\n");
+            } else if (key === "for") {
+                // When the identified component will be declared after the label
+                program.add("scope.componentsFor[" + JSON.stringify(value) + "] = node;\n");
+                // When the identified component was declared before the label
+                program.add("if (scope.components[" + JSON.stringify(value) + "]) {\n");
+                program.add("    node.setAttribute(\"for\", scope.components[" + JSON.stringify(value) + "].getAttribute(\"id\"));\n");
+                program.add("}\n");
+            } else {
+                program.add("node.setAttribute(" + JSON.stringify(key) + ", " + JSON.stringify(value) + ");\n");
             }
-            program.add("node.setAttribute(" + JSON.stringify(key) + ", " + JSON.stringify(value) + ");\n");
         }
         program.push();
         translateFragment(

@@ -4,6 +4,7 @@ module.exports = Scope;
 function Scope() {
     this.root = this;
     this.components = Object.create(null);
+    this.componentsFor = Object.create(null);
 }
 
 Scope.prototype.nest = function () {
@@ -16,6 +17,7 @@ Scope.prototype.nest = function () {
 Scope.prototype.nestComponents = function () {
     var child = this.nest();
     child.components = Object.create(this.components);
+    child.componentsFor = Object.create(this.componentsFor);
     return child;
 };
 
