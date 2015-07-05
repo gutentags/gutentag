@@ -400,6 +400,7 @@ module.exports = Scope;
 function Scope() {
     this.root = this;
     this.components = Object.create(null);
+    this.componentsFor = Object.create(null);
 }
 
 Scope.prototype.nest = function () {
@@ -412,6 +413,7 @@ Scope.prototype.nest = function () {
 Scope.prototype.nestComponents = function () {
     var child = this.nest();
     child.components = Object.create(this.components);
+    child.componentsFor = Object.create(this.componentsFor);
     return child;
 };
 
@@ -559,13 +561,13 @@ Object.defineProperty(Node.prototype, "innerHTML", {
     //}
 });
 
-function Element(document, type, ns) {
-    BaseNode.call(this, document);
-    this.tagName = type;
-    this.ns = ns;
-    this.actualNode = ns ? 
-        document.actualDocument.createElementNS(ns, type) :
-        document.actualDocument.createElement(type);
+function Element(document, type, namespace) {
+    BaseNode.call(this, document, namespace);
+    if (namespace) {
+        this.actualNode = document.actualDocument.createElementNS(namespace, type);
+    } else {
+        this.actualNode = document.actualDocument.createElement(type);
+    }
     this.attributes = this.actualNode.attributes;
 }
 
@@ -649,6 +651,8 @@ Body.prototype.getActualParent = function () {
 Body.prototype.getActualFirstChild = function () {
     if (this.firstChild) {
         return this.firstChild.getActualFirstChild();
+    } else {
+        return this.actualNode;
     }
 };
 
@@ -4435,9 +4439,10 @@ function getParams(scriptName) {
 "use strict";
 
 module.exports = Document;
-function Document() {
+function Document(namespace) {
     this.doctype = null;
     this.documentElement = null;
+    this.namespaceURI = namespace || "";
 }
 
 Document.prototype.nodeType = 9;
@@ -4456,16 +4461,20 @@ Document.prototype.createComment = function (text) {
     return new this.Comment(this, text);
 };
 
-Document.prototype.createElement = function (type) {
-    return new this.Element(this, type);
+Document.prototype.createElement = function (type, namespace) {
+    return new this.Element(this, type, namespace || this.namespaceURI);
 };
 
-Document.prototype.createElementNS = function (ns, type) {
-    return new this.Element(this, type, ns);
+Document.prototype.createElementNS = function (namespace, type) {
+    return new this.Element(this, type, namespace || this.namespaceURI);
 };
 
-Document.prototype.createAttribute = function (name) {
-    return new this.Attr(this, name);
+Document.prototype.createAttribute = function (name, namespace) {
+    return new this.Attr(this, name, namespace || this.namespaceURI);
+};
+
+Document.prototype.createAttributeNS = function (namespace, name) {
+    return new this.Attr(this, name, namespace || this.namespaceURI);
 };
 
 function Node(document) {
@@ -4558,10 +4567,10 @@ Comment.prototype = Object.create(Node.prototype);
 Comment.prototype.constructor = Comment;
 Comment.prototype.nodeType = 8;
 
-function Element(document, type, ns) {
+function Element(document, type, namespace) {
     Node.call(this, document);
     this.tagName = type;
-    this.ns = ns;
+    this.namespaceURI = namespace;
     this.attributes = new this.ownerDocument.NamedNodeMap();
 }
 
@@ -4569,30 +4578,47 @@ Element.prototype = Object.create(Node.prototype);
 Element.prototype.constructor = Element;
 Element.prototype.nodeType = 1;
 
-Element.prototype.hasAttribute = function (name) {
-    var attr = this.attributes.getNamedItem(name);
+Element.prototype.hasAttribute = function (name, namespace) {
+    var attr = this.attributes.getNamedItem(name, namespace);
     return !!attr;
 };
 
-Element.prototype.getAttribute = function (name) {
-    var attr = this.attributes.getNamedItem(name);
+Element.prototype.getAttribute = function (name, namespace) {
+    var attr = this.attributes.getNamedItem(name, namespace);
     return attr ? attr.value : null;
 };
 
-Element.prototype.setAttribute = function (name, value) {
-    var attr = this.ownerDocument.createAttribute(name);
+Element.prototype.setAttribute = function (name, value, namespace) {
+    var attr = this.ownerDocument.createAttribute(name, namespace);
     attr.value = value;
-    this.attributes.setNamedItem(attr);
+    this.attributes.setNamedItem(attr, namespace);
 };
 
-Element.prototype.removeAttribute = function (name) {
-    this.attributes.removeNamedItem(name);
+Element.prototype.removeAttribute = function (name, namespace) {
+    this.attributes.removeNamedItem(name, namespace);
 };
 
-function Attr(ownerDocument, name) {
+Element.prototype.hasAttributeNS = function (namespace, name) {
+    return this.hasAttribute(name, namespace);
+};
+
+Element.prototype.getAttributeNS = function (namespace, name) {
+    return this.getAttribute(name, namespace);
+};
+
+Element.prototype.setAttributeNS = function (namespace, name, value) {
+    this.setAttribute(name, value, namespace);
+};
+
+Element.prototype.removeAttributeNS = function (namespace, name) {
+    this.removeAttribute(name, namespace);
+};
+
+function Attr(ownerDocument, name, namespace) {
     this.ownerDocument = ownerDocument;
     this.name = name;
     this.value = null;
+    this.namespaceURI = namespace;
 }
 
 Attr.prototype.nodeType = 2;
@@ -4601,30 +4627,35 @@ function NamedNodeMap() {
     this.length = 0;
 }
 
-NamedNodeMap.prototype.getNamedItem = function (name) {
-    return this[name];
+NamedNodeMap.prototype.getNamedItem = function (name, namespace) {
+    namespace = namespace || "";
+    var key = encodeURIComponent(namespace) + ":" + encodeURIComponent(name);
+    return this[key];
 };
 
 NamedNodeMap.prototype.setNamedItem = function (attr) {
+    var namespace = attr.namespaceURI || "";
     var name = attr.name;
-    var previousAttr = this[name];
+    var key = encodeURIComponent(namespace) + ":" + encodeURIComponent(name);
+    var previousAttr = this[key];
     if (!previousAttr) {
         this[this.length] = attr;
         this.length++;
         previousAttr = null;
     }
-    this[name] = attr;
+    this[key] = attr;
     return previousAttr;
 };
 
-NamedNodeMap.prototype.removeNamedItem = function (name) {
-    var name = attr.name;
-    var attr = this[name];
+NamedNodeMap.prototype.removeNamedItem = function (name, namespace) {
+    namespace = namespace || "";
+    var key = encodeURIComponent(namespace) + ":" + encodeURIComponent(name);
+    var attr = this[key];
     if (!attr) {
         throw new Error("Not found");
     }
     var index = Array.prototype.indexOf.call(this, attr);
-    delete this[name];
+    delete this[key];
     delete this[index];
     this.length--;
 };
@@ -4633,5 +4664,16 @@ NamedNodeMap.prototype.item = function (index) {
     return this[index];
 };
 
+NamedNodeMap.prototype.getNamedItemNS = function (namespace, name) {
+    return this.getNamedItem(name, namespace);
+};
+
+NamedNodeMap.prototype.setNamedItemNS = function (attr) {
+    return this.setNamedItem(attr);
+};
+
+NamedNodeMap.prototype.removeNamedItemNS = function (namespace, name) {
+    return this.removeNamedItem(name, namespace);
+};
 
 }]])("gutentag/boot-entry.js")
