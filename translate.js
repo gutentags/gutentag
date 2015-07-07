@@ -111,6 +111,18 @@ function analyzeHead(head, program, template, module) {
                         program.add("var $" + name + " = require" + "(" + JSON.stringify(href) + ");\n");
                         module.neededTags[as] = href;
                         template.addTag(as, {type: "external", id: href, name: name});
+                    } else if (rel === "attribute") {
+                        module.dependencies.push(href);
+                        var as = child.getAttribute("as");
+                        if (!as) {
+                            as = /([^\/]+)(?:\.html|\.xml)$/.exec(href);
+                            as = as[1];
+                        }
+                        as = as.toUpperCase();
+                        var name = as.replace(/[^A-Za-z0-9_]/g, '_');
+                        // TODO validate identifier
+                        program.add("var $$" + name + " = require" + "(" + JSON.stringify(href) + ");\n");
+                        template.addAttribute(as, name);
                     }
                     // ...
                 } else if (tagName === "meta") {
@@ -340,29 +352,9 @@ function translateElement(node, program, caller, template, name, displayName) {
         program.add("scope.set(" + JSON.stringify(id) + ", component);\n");
     }
 
+    translateAttributes(node, id, template, program);
+
     if (!argumentTag) {
-        for (var attribute, key, value, index = 0, attributes = node.attributes, length = attributes.length; index < length; index++) {
-            attribute = attributes.item(index);
-            key = attribute.nodeName;
-            value = attribute.value || node.nodeValue;
-            if (key === "id") {
-                var uid = id + "_" + ((0x7FFFFFFF * Math.random()) | 0).toString(36);
-                program.add("node.setAttribute(\"id\", " + JSON.stringify(uid) + ");\n");
-                // If a label precedes the element it refers to
-                program.add("if (scope.componentsFor[" + JSON.stringify(value) + "]) {\n");
-                program.add("   scope.componentsFor[" + JSON.stringify(value) + "].setAttribute(\"for\", " + JSON.stringify(uid) + ")\n");
-                program.add("}\n");
-            } else if (key === "for") {
-                // When the identified component will be declared after the label
-                program.add("scope.componentsFor[" + JSON.stringify(value) + "] = node;\n");
-                // When the identified component was declared before the label
-                program.add("if (scope.components[" + JSON.stringify(value) + "]) {\n");
-                program.add("    node.setAttribute(\"for\", scope.components[" + JSON.stringify(value) + "].getAttribute(\"id\"));\n");
-                program.add("}\n");
-            } else {
-                program.add("node.setAttribute(" + JSON.stringify(key) + ", " + JSON.stringify(value) + ");\n");
-            }
-        }
         program.push();
         translateFragment(
             node,
@@ -373,6 +365,38 @@ function translateElement(node, program, caller, template, name, displayName) {
             displayName
         );
         program.pop();
+    }
+}
+
+function translateAttributes(node, id, template, program) {
+    for (var attribute, key, value, index = 0, attributes = node.attributes, length = attributes.length; index < length; index++) {
+        attribute = attributes.item(index);
+        key = attribute.nodeName;
+        value = attribute.value || node.nodeValue;
+        if (template.hasAttribute(key.toUpperCase())) {
+            var attributeName = template.getAttribute(key.toUpperCase());
+            program.add("$$" + attributeName + "(component, " + JSON.stringify(key) + ", " + JSON.stringify(value) + ", scope);\n");
+        } else if (key === "id") {
+            var uid = id + "_" + ((0x7FFFFFFF * Math.random()) | 0).toString(36);
+            program.add("if (component.setAttribute) {\n");
+            program.add("    component.setAttribute(\"id\", " + JSON.stringify(uid) + ");\n");
+            program.add("}\n");
+            // If a label precedes the element it refers to
+            program.add("if (scope.componentsFor[" + JSON.stringify(value) + "]) {\n");
+            program.add("   scope.componentsFor[" + JSON.stringify(value) + "].setAttribute(\"for\", " + JSON.stringify(uid) + ")\n");
+            program.add("}\n");
+        } else if (key === "for") {
+            // When the identified component will be declared after the label
+            program.add("scope.componentsFor[" + JSON.stringify(value) + "] = node;\n");
+            // When the identified component was declared before the label
+            program.add("if (component.setAttribute && scope.components[" + JSON.stringify(value) + "]) {\n");
+            program.add("    component.setAttribute(\"for\", scope.components[" + JSON.stringify(value) + "].getAttribute(\"id\"));\n");
+            program.add("}\n");
+        } else {
+            program.add("if (component.setAttribute) {\n");
+            program.add("component.setAttribute(" + JSON.stringify(key) + ", " + JSON.stringify(value) + ");\n");
+            program.add("}\n");
+        }
     }
 }
 
@@ -411,6 +435,7 @@ function constructArgument(node, argument, parameter, program, scope, template, 
 
 function Template() {
     this.tags = {};
+    this.attributes = {};
     this.exportNames = {};
     this.nextArgumentIndex = 0;
 }
@@ -425,6 +450,18 @@ Template.prototype.hasTag = function (name) {
 
 Template.prototype.getTag = function (name) {
     return this.tags[name];
+};
+
+Template.prototype.addAttribute = function (name, attribute) {
+    this.attributes[name] = attribute;
+};
+
+Template.prototype.hasAttribute = function (name) {
+    return Object.prototype.hasOwnProperty.call(this.attributes, name);
+};
+
+Template.prototype.getAttribute = function (name) {
+    return this.attributes[name];
 };
 
 Template.prototype.defineComponent =

@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+    <head>
+        <link rel="tag" href="../../repeat.html">
+        <link rel="tag" href="../../reveal.html">
+        <link rel="tag" href="../../text.html">
+        <link rel="attribute" href="./eval-attribute" as="eval">
+    </head>
+    <body>
+        <repeat id="words" eval="this.value = ['Guten Tag', 'Welt!']">
+            <text id="greet" eval="this.value = scope.components['words:iteration'].value"></text>
+            <reveal id="who" eval="this.value = scope.components['words:iteration'].index < 1">
+                <sp>, </sp>
+            </reveal>
+        </repeat>
+    </body>
+</html>
