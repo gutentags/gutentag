@@ -38,8 +38,8 @@ Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
     var body = this.body;
     var document = this.body.ownerDocument;
 
-    this.iterations.slice(index, index + minus.length)
-    .forEach(function (iteration, offset) {
+    for (var offset = index; offset < index + minus.length; offset++) {
+        var iteration = this.iterations[offset];
         body.removeChild(iteration.body);
         iteration.value = null;
         iteration.index = null;
@@ -47,12 +47,14 @@ Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
         if (iteration.destroy) {
             iteration.destroy();
         }
-    }, this);
+    }
 
     var nextIteration = this.iterations[index + 1];
     var nextSibling = nextIteration && nextIteration.body;
 
-    swap(this.iterations, index, minus.length, plus.map(function (value, offset) {
+    var add = [];
+    for (var offset = 0; offset < plus.length; offset++) {
+        var value = plus[offset];
         var iterationNode = document.createBody();
         var iterationScope = this.scope.nestComponents();
 
@@ -65,22 +67,22 @@ Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
         iterationScope.set(this.scope.id + ":iteration", iteration);
 
         body.insertBefore(iterationNode, nextSibling);
-        return iteration;
-    }, this));
+        add.push(iteration);
+    }
 
-    this.updateIndexes(index);
-};
+    swap(this.iterations, index, minus.length, add);
 
-Repetition.prototype.updateIndexes = function (index) {
-    for (var length = this.iterations.length; index < length; index++) {
-        this.iterations[index].index = index;
+    // Update indexes
+    for (var offset = index; offset < this.iterations.length; offset++) {
+        this.iterations[offset].index = offset;
     }
 };
 
 Repetition.prototype.redraw = function (region) {
-    this.iterations.forEach(function (iteration) {
+    for (var index = 0; index < this.iterations.length; index++) {
+        var iteration = this.iterations[index];
         iteration.redraw(region);
-    }, this);
+    }
 };
 
 Repetition.prototype.destroy = function () {
