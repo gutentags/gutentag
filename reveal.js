@@ -23,7 +23,7 @@ Reveal.prototype.handleValuePropertyChange = function (value) {
         this.componentScope = this.scope.nestComponents();
         this.componentBody = this.body.ownerDocument.createBody();
         this.component = new this.Component(this.componentBody, this.componentScope);
-        this.componentScope.set(this.scope.id + ":revelation", this.component);
+        this.componentScope.hookup(this.scope.id + ":revelation", this.component);
         this.body.appendChild(this.componentBody);
     }
 };

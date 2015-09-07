@@ -32,7 +32,7 @@ Object.defineProperty(Choose.prototype, "value", {
         this.choiceBody = this.body.ownerDocument.createBody();
         this.choiceScope = this.scope.nestComponents();
         this.choice = new this.choices[value](this.choiceBody, this.choiceScope);
-        this.choiceScope.set(this.scope.id + ":" + value, this.choice);
+        this.choiceScope.hookup(this.scope.id + ":" + value, this.choice);
         this.body.appendChild(this.choiceBody);
     }
 });

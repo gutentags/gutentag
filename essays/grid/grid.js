@@ -17,7 +17,7 @@ Object.defineProperty(Grid.prototype, "value", {
     }
 });
 
-Grid.prototype.add = function add(component, id, scope) {
+Grid.prototype.hookup = function hookup(id, component, scope) {
     if (id === "this") {
         this.columns = scope.components.columns;
         this.rows = scope.components.rows;

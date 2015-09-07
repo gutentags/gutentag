@@ -10,7 +10,7 @@ function Main() {
         this.ticks12.push(i * 6 * 5);
     }
 }
-Main.prototype.add = function add(component, id, scope) {
+Main.prototype.hookup = function hookup(id, component, scope) {
     if (id === "this") {
         scope.components.ticks60.value = this.ticks60;
         scope.components.ticks12.value = this.ticks12;

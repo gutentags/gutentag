@@ -21,17 +21,26 @@ Scope.prototype.nestComponents = function () {
     return child;
 };
 
+// TODO deprecated
 Scope.prototype.set = function (id, component) {
+    console.log(new Error().stack);
+    this.hookup(id, component);
+};
+
+Scope.prototype.hookup = function (id, component) {
     var scope = this;
     scope.components[id] = component;
 
-    if (scope.this.add) {
+    if (scope.this.hookup) {
+        scope.this.hookup(id, component, scope);
+    } else if (scope.this.add) {
+        // TODO deprecated
         scope.this.add(component, id, scope);
     }
 
     var exportId = scope.this.exports && scope.this.exports[id];
     if (exportId) {
         var callerId = scope.caller.id;
-        scope.caller.set(callerId + ":" + exportId, component);
+        scope.caller.hookup(callerId + ":" + exportId, component);
     }
 };

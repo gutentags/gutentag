@@ -4,7 +4,7 @@ module.exports = Essay;
 function Essay() {
 }
 
-Essay.prototype.add = function (child, id, scope) {
+Essay.prototype.hookup = function hookup(id, child, scope) {
     if (id === "this") {
         scope.components.grid.value = {
             value: [

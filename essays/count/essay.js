@@ -5,7 +5,7 @@ function Essay() {
     this.value = [1, 2, 3];
 }
 
-Essay.prototype.add = function (child, id, scope) {
+Essay.prototype.hookup = function hookup(id, child, scope) {
     if (id === "this") {
         this.repeat = scope.components.repeat;
         scope.components.repeat.value = this.value;

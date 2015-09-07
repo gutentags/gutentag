@@ -58,14 +58,14 @@ An instance of a tag is a component.
 ```
 
 A JavaScript module, `list.js`, connects the components of the list.
-The HTML module exports a constructor for the module and calls into the `add`
-method of the underlying JavaScript implementation, if it exists.
+The HTML module exports a constructor for the module and calls into the
+`hookup` method of the underlying JavaScript implementation, if it exists.
 
 ```js
 'use strict';
 module.exports = List;
 function List() {}
-List.prototype.add = function (child, id, scope) {
+List.prototype.hookup = function hookup(id, child, scope) {
     if (id === "items:iteration") {
         scope.text.value = child.value;
     } else if (id === "this") {
@@ -385,7 +385,7 @@ The iteration object has an `index` and a `value` property.
 'use strict';
 module.exports = List;
 function List() {}
-List.prototype.add = function (component, id, scope) {
+List.prototype.hookup = function hookup(id, component, scope) {
     var components = scope.components;
     if (id === "items:iteration") {
         components.text.value = component.value;
@@ -420,7 +420,7 @@ Reveals its content based on whether `value` is truthy.
 'use strict';
 module.exports = Blink;
 function Blink() {}
-Blink.prototype.add = function (component, id) {
+Blink.prototype.hookup = function hookup(id, component) {
     if (id === "content") {
         setInterval(function () {
             component.value = !component.value;
@@ -595,7 +595,7 @@ can see the value of the iteration.
 ```js
 module.exports = Essay;
 function Essay() {}
-Essay.prototype.add = function (child, id, scope) {
+Essay.prototype.hookup = function hookup(id, child, scope) {
     var components = scope.components;
     if (id === "items:row") {
         components.item.value = child.value;

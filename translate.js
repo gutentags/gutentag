@@ -231,7 +231,7 @@ function translateBody(body, program, template, name, displayName) {
 
     // Note "this" in scope.
     // This is a good hook for final wiring.
-    bodyProgram.add("this.scope.set(\"this\", this);\n");
+    bodyProgram.add("this.scope.hookup(\"this\", this);\n");
 }
 
 function translateArgument(node, program, scope, template, name, displayName) {
@@ -349,7 +349,7 @@ function translateElement(node, program, caller, template, name, displayName) {
 
     // Introduce new component or node to its owner.
     if (id) {
-        program.add("scope.set(" + JSON.stringify(id) + ", component);\n");
+        program.add("scope.hookup(" + JSON.stringify(id) + ", component);\n");
     }
 
     translateAttributes(node, id, template, program);

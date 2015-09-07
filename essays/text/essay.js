@@ -5,7 +5,7 @@ function Essay() {
     this._value = true;
 }
 
-Essay.prototype.add = function (child, id, scope) {
+Essay.prototype.hookup = function hookup(id, child, scope) {
     var components = scope.components;
     if (id === "this") {
         components.greeting.value = "Guten Tag, Welt!";
@@ -13,15 +13,15 @@ Essay.prototype.add = function (child, id, scope) {
     }
 };
 
-Essay.prototype.handleEvent = function (event) {
+Essay.prototype.handleEvent = function handleEvent(event) {
     this.value = !this.value;
 };
 
 Object.defineProperty(Essay.prototype, "value", {
-    get: function () {
+    get: function getValue() {
         return this._value;
     },
-    set: function (value) {
+    set: function setValue(value) {
         this._value = value;
         this.scope.components.greeting.value = value ? "Guten Tag, Welt!" : null;
     }
