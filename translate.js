@@ -144,8 +144,8 @@ function getAs(node) {
     var href = node.getAttribute("href");
     var as = node.getAttribute("as");
     if (!as) {
-        as = /([^\/]+)(?:\.html|\.xml)$/.exec(href);
-        as = as[1];
+        var match = /([^\/]+)(?:\.html|\.xml)$/.exec(href);
+        as = match[1];
     }
     return as.toUpperCase();
 }
