@@ -4,7 +4,7 @@
   "description": "HTML tag definition modules",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kriskowal/gutentag.git"
+    "url": "https://github.com/gutentags/gutentag.git"
   },
   "keywords": [
     "html",
