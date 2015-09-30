@@ -100,12 +100,7 @@ function analyzeHead(head, program, template, module) {
                         template.exports = href;
                     } else if (rel === "tag") {
                         module.dependencies.push(href);
-                        var as = child.getAttribute("as");
-                        if (!as) {
-                            as = /([^\/]+)(?:\.html|\.xml)$/.exec(href);
-                            as = as[1];
-                        }
-                        as = as.toUpperCase();
+                        var as = getAs(child);
                         var name = as.replace(/[^A-Za-z0-9_]/g, '_');
                         // TODO validate identifier
                         program.add("var $" + name + " = require" + "(" + JSON.stringify(href) + ");\n");
@@ -113,12 +108,7 @@ function analyzeHead(head, program, template, module) {
                         template.addTag(as, {type: "external", id: href, name: name});
                     } else if (rel === "attribute") {
                         module.dependencies.push(href);
-                        var as = child.getAttribute("as");
-                        if (!as) {
-                            as = /([^\/]+)(?:\.html|\.xml)$/.exec(href);
-                            as = as[1];
-                        }
-                        as = as.toUpperCase();
+                        var as = getAs(child);
                         var name = as.replace(/[^A-Za-z0-9_]/g, '_');
                         // TODO validate identifier
                         program.add("var $$" + name + " = require" + "(" + JSON.stringify(href) + ");\n");
@@ -148,6 +138,17 @@ function analyzeHead(head, program, template, module) {
             child = child.nextSibling;
         }
     }
+}
+
+function getAs(node) {
+    var href = node.getAttribute("href");
+    var as = node.getAttribute("as");
+    if (!as) {
+        var match = /([^\/]+)$/.exec(href);
+        as = match[1];
+        as = as.replace(/(?:\.html|\.xml)$/, '');
+    }
+    return as.toUpperCase();
 }
 
 function analyzeElement(element, program, template, module) {
