@@ -2,6 +2,88 @@
 Guten Tag!
 ===========
 
+HTML components should be as simple and as powerful as functions.
+
+```js
+greet(subject("Guten Tag"), ", ", object("Welt"), "!")
+```
+
+A tag is an invocation of a web component and the fragment between the start
+and end tag is its argument.
+
+```html
+<greet>
+    <subject>Guten Tag</subject>,
+    <object>Welt</object>!
+</greet>
+```
+
+The result is a component tree that governs a fragment of a document beneath
+its call site.
+
+However, components must also be reactive, adapting their output to changes to
+their input.
+So, like a cell in a spreadsheet, as its value gets incrementally re-evaluated
+whenenver one of its dependent variables changes, the fragment of the document
+it governs adapts incrementally to changes to the bound data.
+
+Furthermore, an HTML module is a component declaration.
+Like a function declaration, it describes how it will receive its arguments
+and how to assemble the resulting component from other, constituent components.
+Like a module, it describes the tags it depends upon and uses to assemble its
+own body.
+
+```html
+<html>
+    <head>
+        <link rel="tag" href="gutentag/repeat.html">
+        <meta accepts="[body]" as="argument">
+        <meta exports="items:iteration" as="item">
+    </head>
+    <body>
+        <ul><repeat id="items">
+            <li id="item" type="a"><argument id="argument"></argument></li>
+        </repeat></ul>
+    </body>
+</html>
+```
+
+Every instance of that component has its own lexical scope.
+Each scope is a name space mapping component identifiers to child components
+and may have a parent scope and an argument scope.
+Each tag exists in a scope and some tags, like the repeat tag, may introduce
+child scopes.
+If a tag instantiates its argument, the arguments are instantiated in their own
+lexical scope.
+
+```html
+<html>
+    <head>
+        <link rel="tag" href="./list.html">
+        <link rel="tag" href="gutentags/text.html">
+    </head>
+    <body>
+        <list id="list">
+            <text id="item"></text>
+        </list>
+    </body>
+</html>
+```
+
+In this example, creating a list component passes the text component as an
+argument.
+Even though that argument is instantiated in the first module, it is evaluated
+in the scope of the second module, the module in which it is declared: its
+lexical scope.
+
+With some additional JavaScript (or a binding declaration not addressed by this
+module) to bind the value of the list to an array, and to bind that array to
+the inner component's repetition, this component would drive an actual document
+with a lettered list, incrementally updating the document in response to values
+added and removed from its model.
+
+---
+
 A guten tag is an HTML or XML file that defines a template for instantiating a
 combination of JavaScript components and DOM elements.
 Guten tags export a component constructor and can import other component
