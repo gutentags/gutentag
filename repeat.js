@@ -49,7 +49,7 @@ Repetition.prototype.handleValueRangeChange = function (plus, minus, index) {
         }
     }
 
-    var nextIteration = this.iterations[index + 1];
+    var nextIteration = this.iterations[index];
     var nextSibling = nextIteration && nextIteration.body;
 
     var add = [];
