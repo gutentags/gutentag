@@ -16,7 +16,7 @@ Object.defineProperty(Choose.prototype, "value", {
         return this._value;
     },
     set: function (value) {
-        if (!this.choices[value]) {
+        if (value != null && !this.choices[value]) {
             throw new Error("Can't switch to non-existant option");
         }
 
@@ -27,13 +27,17 @@ Object.defineProperty(Choose.prototype, "value", {
                 this.choice.destroy();
             }
             this.body.removeChild(this.choiceBody);
+            this.choice = null;
+            this.choiceBody = null;
         }
 
-        this.choiceBody = this.body.ownerDocument.createBody();
-        this.choiceScope = this.scope.nestComponents();
-        this.choice = new this.choices[value](this.choiceBody, this.choiceScope);
-        this.choiceScope.hookup(this.scope.id + ":" + value, this.choice);
-        this.body.appendChild(this.choiceBody);
+        if (value != null) {
+            this.choiceBody = this.body.ownerDocument.createBody();
+            this.choiceScope = this.scope.nestComponents();
+            this.choice = new this.choices[value](this.choiceBody, this.choiceScope);
+            this.choiceScope.hookup(this.scope.id + ":" + value, this.choice);
+            this.body.appendChild(this.choiceBody);
+        }
     }
 });
 
