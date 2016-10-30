@@ -22,7 +22,7 @@
     "pop-observe": "^2.0.1",
     "pop-swap": "^1.0.0",
     "q": "^2.0.3",
-    "system": "^1.0.4",
+    "system": "^1.1.0",
     "wizdom": "^1.1.0"
   },
   "devDependencies": {
@@ -30,9 +30,9 @@
     "pegjs": "^0.8.0",
     "uglify-js": "^2.4.16"
   },
-  "translators": {
-    "html": "./translate-html",
-    "xml": "./translate-xml"
+  "extensions": {
+    "html": "./extension",
+    "xml": "./extension"
   },
   "scripts": {
     "test": "jasminum test",

@@ -334,14 +334,14 @@ $ npm install --save koerper
 $ npm install --save gutentag
 ```
 
-To enable Mr to load Gutentag HTML or XML files, add a "translators" annotation
+To enable Mr to load Gutentag HTML or XML files, add a "extensions" annotation
 to `package.json`.
 
 ```json
 {
-  "translators": {
-    "html": "gutentag/translate-html",
-    "xml": "gutentag/translate-xml"
+  "extensions": {
+    "html": "gutentag/extension",
+    "xml": "gutentag/extension"
   }
 }
 ```

@@ -1,3 +1,5 @@
+// @generated
+/*eslint semi:[0], no-native-reassign:[0]*/
 global = this;
 (function (modules) {
 
@@ -2627,18 +2629,17 @@ Promise.prototype.nmcall = deprecate(Promise.prototype.ninvoke, "nmcall", "q/nod
 var qEndingLine = captureLine();
 
 
-}],["boot-entry.js","system","boot-entry.js",{"./system":12,"./url":13,"q":10,"./script-params":20,"./identifier":16},function (require, exports, module, __filename, __dirname){
+}],["boot-entry.js","system","boot-entry.js",{"./system":12,"./url":13,"./script-params":20},function (require, exports, module, __filename, __dirname){
 
 // system/boot-entry.js
 // --------------------
 
+/*eslint-env browser*/
 "use strict";
 
 var System = require("./system");
 var URL = require("./url");
-var Q = require("q");
 var getParams = require("./script-params");
-var Identifier = require("./identifier");
 
 module.exports = boot;
 function boot(params) {
@@ -2670,6 +2671,7 @@ if (require.main === module) {
 // system/browser-system.js
 // ------------------------
 
+/*eslint-env browser*/
 "use strict";
 
 var Q = require("q");
@@ -2741,6 +2743,7 @@ function xhrSuccess(req) {
 // system/browser-url.js
 // ---------------------
 
+/*eslint-env browser*/
 // This is the browser implementation for "url",
 // redirected from "url" within this package by the
 // loader because of the "browser" redirects in package.json.
@@ -2798,6 +2801,8 @@ exports.resolve = function resolve(base, relative) {
 // system/common-system.js
 // -----------------------
 
+/*eslint no-console:[0]*/
+/*global console*/
 "use strict";
 
 var Q = require("q");
@@ -2815,7 +2820,7 @@ function System(location, description, options) {
     var self = this;
     options = options || {};
     description = description || {};
-    self.name = description.name || '';
+    self.name = description.name || "";
     self.location = location;
     self.description = description;
     self.dependencies = {};
@@ -2827,8 +2832,8 @@ function System(location, description, options) {
     self.systemLoadedPromises = options.systemLoadedPromises || {}; // by system.name
     self.buildSystem = options.buildSystem; // or self if undefined
     self.analyzers = {js: self.analyzeJavaScript};
-    self.compilers = {js: self.compileJavaScript, json: self.compileJson};
-    self.translators = {};
+    self.compilers = {js: self.compileJavaScript};
+    self.translators = {json: self.translateJson};
     self.internalRedirects = {};
     self.externalRedirects = {};
     self.node = !!options.node;
@@ -2869,6 +2874,7 @@ function System(location, description, options) {
 
     // Local per-extension overrides:
     if (description.redirects) { self.addRedirects(description.redirects); }
+    if (description.extensions) { self.addExtensions(description.extensions); }
     if (description.translators) { self.addTranslators(description.translators); }
     if (description.analyzers) { self.addAnalyzers(description.analyzers); }
     if (description.compilers) { self.addCompilers(description.compilers); }
@@ -2876,7 +2882,7 @@ function System(location, description, options) {
 
 System.load = function loadSystem(location, options) {
     var self = this;
-    return self.prototype.loadSystemDescription(location)
+    return self.prototype.loadSystemDescription(location, "<anonymous>")
     .then(function (description) {
         return new self(location, description, options);
     });
@@ -2980,7 +2986,7 @@ System.prototype.makeRequire = function makeRequire(abs, main) {
     var self = this;
     function require(rel) {
         return self.require(rel, abs);
-    };
+    }
     require.main = main;
     return require;
 };
@@ -2990,21 +2996,21 @@ System.prototype.makeRequire = function makeRequire(abs, main) {
 // Should only be called if the system is known to have already been loaded by
 // system.loadSystem.
 System.prototype.getSystem = function getSystem(rel, abs) {
-    var self = this;
-    var hasDependency = self.dependencies[rel];
+    var via;
+    var hasDependency = this.dependencies[rel];
     if (!hasDependency) {
-        var via = abs ? " via " + JSON.stringify(abs) : "";
+        via = abs ? " via " + JSON.stringify(abs) : "";
         throw new Error(
             "Can't get dependency " + JSON.stringify(rel) +
-            " in package named " + JSON.stringify(self.name) + via
+            " in package named " + JSON.stringify(this.name) + via
         );
     }
-    var dependency = self.systems[rel];
+    var dependency = this.systems[rel];
     if (!dependency) {
-        var via = abs ? " via " + JSON.stringify(abs) : "";
+        via = abs ? " via " + JSON.stringify(abs) : "";
         throw new Error(
             "Can't get dependency " + JSON.stringify(rel) +
-            " in package named " + JSON.stringify(self.name) + via
+            " in package named " + JSON.stringify(this.name) + via
         );
     }
     return dependency;
@@ -3020,15 +3026,15 @@ System.prototype.loadSystem = function (name, abs) {
     //}
     var loadingSystem = self.systemLoadedPromises[name];
     if (!loadingSystem) {
-         loadingSystem = self.actuallyLoadSystem(name, abs);
-         self.systemLoadedPromises[name] = loadingSystem;
+        loadingSystem = self.actuallyLoadSystem(name, abs);
+        self.systemLoadedPromises[name] = loadingSystem;
     }
     return loadingSystem;
 };
 
-System.prototype.loadSystemDescription = function loadSystemDescription(location) {
+System.prototype.loadSystemDescription = function loadSystemDescription(location, name) {
     var self = this;
-    var descriptionLocation = URL.resolve(location, "package.json")
+    var descriptionLocation = URL.resolve(location, "package.json");
     return self.read(descriptionLocation, "utf-8", "application/json")
     .then(function (json) {
         try {
@@ -3039,10 +3045,10 @@ System.prototype.loadSystemDescription = function loadSystemDescription(location
             throw error;
         }
     }, function (error) {
-        error.message = "Can't load package at " +
+        error.message = "Can't load package " + JSON.stringify(name) + " at " +
             JSON.stringify(location) + " because " + error.message;
         throw error;
-    })
+    });
 };
 
 System.prototype.actuallyLoadSystem = function (name, abs) {
@@ -3061,7 +3067,7 @@ System.prototype.actuallyLoadSystem = function (name, abs) {
         buildSystem = self.buildSystem.actuallyLoadSystem(name, abs);
     }
     return Q.all([
-        self.loadSystemDescription(location),
+        self.loadSystemDescription(location, name),
         buildSystem
     ]).spread(function onDescriptionAndBuildSystem(description, buildSystem) {
         var system = new System(location, description, {
@@ -3094,6 +3100,7 @@ System.prototype.normalizeIdentifier = function (id) {
     var extension = Identifier.extension(id);
     if (
         !has.call(self.translators, extension) &&
+        !has.call(self.analyzers, extension) &&
         !has.call(self.compilers, extension) &&
         extension !== "js" &&
         extension !== "json"
@@ -3103,13 +3110,78 @@ System.prototype.normalizeIdentifier = function (id) {
     return id;
 };
 
+System.prototype.load = function load(rel, abs) {
+    var self = this;
+    return self.deepLoad(rel, abs)
+    .then(function () {
+        return self.deepCompile(rel, abs, {});
+    });
+};
+
+System.prototype.deepCompile = function deepCompile(rel, abs, memo) {
+    var self = this;
+
+    var res = Identifier.resolve(rel, abs);
+    if (Identifier.isAbsolute(rel)) {
+        if (self.externalRedirects[res]) {
+            return self.deepCompile(self.externalRedirects[res], res, memo);
+        }
+        var head = Identifier.head(rel);
+        var tail = Identifier.tail(rel);
+        if (self.dependencies[head]) {
+            var system = self.getSystem(head, abs);
+            return system.compileInternalModule(tail, "", memo);
+        } else {
+            // XXX no clear idea what to do in this load case.
+            // Should never reject, but should cause require to produce an
+            // error.
+            return Q();
+        }
+    } else {
+        return self.compileInternalModule(rel, abs, memo);
+    }
+};
+
+System.prototype.compileInternalModule = function compileInternalModule(rel, abs, memo) {
+    var self = this;
+
+    var res = Identifier.resolve(rel, abs);
+    var id = self.normalizeIdentifier(res);
+    if (self.internalRedirects[id]) {
+        return self.deepCompile(self.internalRedirects[id], "", memo);
+    }
+    var module = self.lookupInternalModule(id, abs);
+
+    // Break the cycle of violence
+    if (memo[module.key]) {
+        return Q();
+    }
+    memo[module.key] = true;
+
+    if (module.compiled) {
+        return Q();
+    }
+    module.compiled = true;
+    return Q.try(function () {
+        return Q.all(module.dependencies.map(function (dependency) {
+            return self.deepCompile(dependency, module.id, memo);
+        }));
+    }).then(function () {
+        return self.translate(module);
+    }).then(function () {
+        return self.compile(module);
+    }).catch(function (error) {
+        module.error = error;
+    });
+};
+
 // Loads a module and its transitive dependencies.
-System.prototype.load = function load(rel, abs, memo) {
+System.prototype.deepLoad = function deepLoad(rel, abs, memo) {
     var self = this;
     var res = Identifier.resolve(rel, abs);
     if (Identifier.isAbsolute(rel)) {
         if (self.externalRedirects[res]) {
-            return self.load(self.externalRedirects[res], res, memo);
+            return self.deepLoad(self.externalRedirects[res], res, memo);
         }
         var head = Identifier.head(rel);
         var tail = Identifier.tail(rel);
@@ -3132,7 +3204,7 @@ System.prototype.loadInternalModule = function loadInternalModule(rel, abs, memo
     var res = Identifier.resolve(rel, abs);
     var id = self.normalizeIdentifier(res);
     if (self.internalRedirects[id]) {
-        return self.load(self.internalRedirects[id], "", memo);
+        return self.deepLoad(self.internalRedirects[id], "", memo);
     }
 
     // Extension must be captured before normalization since it is used to
@@ -3184,20 +3256,11 @@ System.prototype.loadInternalModule = function loadInternalModule(rel, abs, memo
 System.prototype.finishLoadingModule = function finishLoadingModule(module, memo) {
     var self = this;
     return Q.try(function () {
-        return self.translate(module);
-        // TODO optimize
-        // TODO instrument
-        // TODO facilitate source maps and source map transforms
-    }).then(function () {
         return self.analyze(module);
     }).then(function () {
         return Q.all(module.dependencies.map(function onDependency(dependency) {
-            return self.load(dependency, module.id, memo);
+            return self.deepLoad(dependency, module.id, memo);
         }));
-    }).then(function () {
-        return self.compile(module);
-    }).catch(function (error) {
-        module.error = error;
     });
 };
 
@@ -3237,14 +3300,14 @@ System.prototype.lookupInternalModule = function lookupInternalModule(rel, abs) 
         return self.lookup(self.internalRedirects[id], res);
     }
 
-    var filename = self.name + '/' + id;
+    var filename = self.name + "/" + id;
     // This module system is case-insensitive, but mandates that a module must
     // be consistently identified by the same case convention to avoid problems
     // when migrating to case-sensitive file systems.
     var key = filename.toLowerCase();
     var module = self.modules[key];
 
-    if (module && module.redirect) {
+    if (module && module.redirect && module.redirect !== module.id) {
         return self.lookupInternalModule(module.redirect);
     }
 
@@ -3270,6 +3333,30 @@ System.prototype.lookupInternalModule = function lookupInternalModule(rel, abs) 
     }
 
     return module;
+};
+
+System.prototype.addExtensions = function (map) {
+    var extensions = Object.keys(map);
+    for (var index = 0; index < extensions.length; index++) {
+        var extension = extensions[index];
+        var id = map[extension];
+        this.analyzers[extension] = this.makeLoadStep(id, "analyze");
+        this.translators[extension] = this.makeLoadStep(id, "translate");
+        this.compilers[extension] = this.makeLoadStep(id, "compile");
+    }
+};
+
+System.prototype.makeLoadStep = function makeLoadStep(id, name) {
+    var self = this;
+    return function moduleLoaderStep(module) {
+        return self.getBuildSystem()
+        .import(id)
+        .then(function (exports) {
+            if (exports[name]) {
+                return exports[name](module);
+            }
+        });
+    };
 };
 
 // Translate:
@@ -3315,29 +3402,56 @@ System.prototype.makeTranslator = function makeTranslator(id) {
             module.extension = "js";
             return translate(module);
         });
-    }
+    };
 };
 
 // Analyze:
 
 System.prototype.analyze = function analyze(module) {
-    var self = this;
     if (
         module.text != null &&
         module.extension != null &&
-        self.analyzers[module.extension]
+        this.analyzers[module.extension]
     ) {
-        return self.analyzers[module.extension](module);
+        return this.analyzers[module.extension](module);
     }
 };
 
 System.prototype.analyzeJavaScript = function analyzeJavaScript(module) {
-    var self = this;
     module.dependencies.push.apply(module.dependencies, parseDependencies(module.text));
 };
 
-// TODO addAnalyzers
-// TODO addAnalyzer
+System.prototype.addAnalyzers = function addAnalyzers(analyzers) {
+    var self = this;
+    var extensions = Object.keys(analyzers);
+    for (var index = 0; index < extensions.length; index++) {
+        var extension = extensions[index];
+        var id = analyzers[extension];
+        self.addAnalyzer(extension, id);
+    }
+};
+
+System.prototype.addAnalyzer = function (extension, id) {
+    var self = this;
+    self.analyzers[extension] = self.makeAnalyzer(id);
+};
+
+System.prototype.makeAnalyzer = function makeAnalyzer(id) {
+    var self = this;
+    return function analyze(module) {
+        return self.getBuildSystem()
+        .import(id)
+        .then(function onAnalyzerImported(analyze) {
+            if (typeof analyze !== "function") {
+                throw new Error(
+                    "Can't analyze " + JSON.stringify(module.id) +
+                    " because " + JSON.stringify(id) + " did not export a function"
+                );
+            }
+            return analyze(module);
+        });
+    };
+};
 
 // Compile:
 
@@ -3358,8 +3472,8 @@ System.prototype.compileJavaScript = function compileJavaScript(module) {
     return compile(module);
 };
 
-System.prototype.compileJson = function compileJson(module) {
-    module.exports = JSON.parse(module.text);
+System.prototype.translateJson = function translateJson(module) {
+    module.text = "module.exports = " + module.text.trim() + ";\n";
 };
 
 System.prototype.addCompilers = function addCompilers(compilers) {
@@ -3385,7 +3499,7 @@ System.prototype.makeCompiler = function makeCompiler(id) {
         .then(function (compile) {
             return compile(module);
         });
-    }
+    };
 };
 
 // Resource:
@@ -3511,7 +3625,7 @@ function compile(module) {
     // Here we use a couple tricks to make debugging better in various browsers:
     // TODO: determine if these are all necessary / the best options
     // 1. name the function with something inteligible since some debuggers display the first part of each eval (Firebug)
-    // 2. append the "//@ sourceURL=filename" hack (Safari, Chrome, Firebug)
+    // 2. append the "//# sourceURL=filename" hack (Safari, Chrome, Firebug)
     //  * http://pmuellr.blogspot.com/2009/06/debugger-friendly.html
     //  * http://blog.getfirebug.com/2009/08/11/give-your-eval-a-name-with-sourceurl/
     //      TODO: investigate why this isn't working in Firebug.
@@ -3525,7 +3639,7 @@ function compile(module) {
             displayName +
              "(require, exports, module, __filename, __dirname) {" +
             module.text +
-            "//*/\n})\n//@ sourceURL=" +
+            "//*/\n})\n//# sourceURL=" +
             module.system.location + module.id
         );
     } catch (exception) {
@@ -3606,7 +3720,7 @@ function basename(id) {
 
 exports.resolve = resolve;
 function resolve(rel, abs) {
-    abs = abs || '';
+    abs = abs || "";
     var source = rel.split("/");
     var target = [];
     var parts;
@@ -3688,14 +3802,13 @@ function Resource() {
     this.system = null;
 }
 
-}],["script-params.js","system","script-params.js",{"./url":13},function (require, exports, module, __filename, __dirname){
+}],["script-params.js","system","script-params.js",{},function (require, exports, module, __filename, __dirname){
 
 // system/script-params.js
 // -----------------------
 
+/*eslint-env browser*/
 "use strict";
-
-var URL = require("./url");
 
 module.exports = getParams;
 function getParams(scriptName) {
@@ -3733,7 +3846,7 @@ function getParams(scriptName) {
 
                 for (j = 0; j < script.attributes.length; j++) {
                     attr = script.attributes[j];
-                    match = attr.name.match(/^data-(.*)$/);
+                    match = attr.name.match(dataRe);
                     if (match) {
                         params[match[1].replace(letterAfterDash, upperCaseChar)] = attr.value;
                     }
