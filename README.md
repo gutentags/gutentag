@@ -514,13 +514,13 @@ Reveals its content based on whether `value` is truthy.
     <head>
         <link rel="extends" href="./blink">
         <link rel="tag" href="gutentag/reveal.html">
-        <meta accepts="[body]">
+        <meta accepts="[body]" as="argument">
     </head>
     <body>
         <reveal id="content"><argument></argument></reveal>
     </body>
 </html>
-```html
+```
 
 ```js
 'use strict';
