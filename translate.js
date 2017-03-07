@@ -1,175 +1,66 @@
 "use strict";
 
-// scope: the scope in which this component exists
-// this.scope: the scope for this component, in which its child components exist
-// this.scope.argument == scope, the scope in which to instantiate the parameter component
-
-var Q = require("q");
 var domenic = require("domenic");
 var parser = new domenic.DOMParser();
-var Program = require("./program");
-var parseAccepts = require("./accepts-parser").parse;
-var translateParameter = require("./translate-parameter");
-var negotiateArgument = require("./translate-argument");
 var Scope = require("./scope");
+var innerText = require("wizdom/inner-text");
 
-module.exports = function translate(module, type) {
-    var trim = 0;
-    if (type === "application/xml") {
-        trim = 4;
-    } else if (type === "text/html") {
-        trim = 5;
-    } else {
-        throw new Error("Can't translate type " + JSON.stringify(type) + " Use text/html or application/xml");
-    }
-    var displayName = module.filename.slice(0, module.filename.length - trim).split(/[#\/]/g).map(function (part) {
-        part = part.replace(/[^a-zA-Z0-9]/g, "");
-        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
-    }).join("");
-    if (!/[A-Z]/.test(displayName[0])) {
-        displayName = "_" + displayName;
-    }
-    var document = parser.parseFromString(module.text, type);
-    var program = new Program();
-    var section = program.documentElement;
-    var template = new Template();
-    section.add('"use strict";\n');
-    module.neededTags = {};
-    analyzeDocument(document, section, template, module);
-    return Q.all(Object.keys(module.neededTags).map(function (name) {
-        var href = module.neededTags[name];
-        return module.system.load(href, module.id)
-        .then(function () {
-            template.getTag(name).module = module.system.lookup(href, module.id);
-        });
-    })).then(function () {
-        translateDocument(
-            document,
-            section.addSection("body"),
-            template,
-            module,
-            "THIS",
-            displayName
-        );
-        module.text = program.digest();
-    });
-};
+// call graph:
+// - translateModule
+//   - <html> translateDocument
+//     - <body> tranlsateBody
+//       - translateComponentBody (or recurse from argument)
+//         - translateFragment (or recurse from element)
+//           - translateElement
+//             - translateFragment (recurse)
+//             - translateAttributes
+//             - translateComponent
+//               - translateArgument (or recurse from translateArgumentOption)
+//                 - translateArgumentOption
+//                   - translateArgument (recurse)
+//                 - translateArgumentBody
+//                   - translateComponentBody (recurse)
 
-// TODO We need to use this data, but whether space can be trimmed has less to
-// do with the parent element and more to do with siblings.
-// <div>  a: <span>x</span>,  <span>y</span>  </div>
-//      ^^                   ^              ^^
-// Custom tags need to be able to express whether and how internal and
-// surrounding space should be handled.
-// CSS lies.
-
-function analyzeDocument(document, program, template, module) {
-    var child = document.documentElement.firstChild;
-    while (child) {
-        if (child.nodeType === 1 /* ELEMENT_NODE */) {
-            var tagName = child.tagName.toLowerCase();
-            if (tagName === "head") {
-                analyzeHead(child, program, template, module);
-            } else if (tagName === "body") {
-                analyzeElement(child, program, template, module);
-            }
-        }
-        child = child.nextSibling;
+module.exports = translateModule;
+function translateModule(module) {
+    // Cross-reference needed tags on template
+    var tagNames = Object.keys(module.neededTags);
+    for (var i = 0; i < tagNames.length; i++) {
+        var tagName = tagNames[i];
+        var href = module.neededTags[tagName];
+        module.template.getTag(tagName).module = module.system.lookup(href, module.id);
     }
+
+    translateDocument(
+        module.document,
+        module.programHead,
+        module.template,
+        module,
+        "THIS",
+        module.tagDisplayName
+    );
+
+    module.text = module.program.digest();
+    module.extension = "js";
 }
 
-function analyzeHead(head, program, template, module) {
-    template.addTag("THIS", {type: "external", module: module, name: "THIS"});
-    module.parameter = {};
-    if (head) {
-        var child = head.firstChild;
-        while (child) {
-            // TODO constants do not exist in minidom
-            if (child.nodeType === 1 /* ELEMENT_NODE */) {
-                var tagName = child.tagName.toLowerCase();
-                if (tagName === "link") {
-                    var rel = child.getAttribute("rel");
-                    var href = child.getAttribute("href");
-                    if (rel === "extends") {
-                        program.add("var $SUPER = require" + "(" + JSON.stringify(href) + ");\n");
-                        module.dependencies.push(href);
-                        template.extends = true;
-                        template.addTag("SUPER", {type: "super", name: "SUPER"});
-                    } else if (rel === "exports") {
-                        module.dependencies.push(href);
-                        template.exports = href;
-                    } else if (rel === "tag") {
-                        module.dependencies.push(href);
-                        var as = getAs(child);
-                        var name = as.replace(/[^A-Za-z0-9_]/g, '_');
-                        // TODO validate identifier
-                        program.add("var $" + name + " = require" + "(" + JSON.stringify(href) + ");\n");
-                        module.neededTags[as] = href;
-                        template.addTag(as, {type: "external", id: href, name: name});
-                    } else if (rel === "attribute") {
-                        module.dependencies.push(href);
-                        var as = getAs(child);
-                        var name = as.replace(/[^A-Za-z0-9_]/g, '_');
-                        // TODO validate identifier
-                        program.add("var $$" + name + " = require" + "(" + JSON.stringify(href) + ");\n");
-                        template.addAttribute(as, name);
-                    }
-                    // ...
-                } else if (tagName === "meta") {
-                    if (child.getAttribute("accepts")) {
-                        var accepts = child.getAttribute("accepts");
-                        var syntax = parseAccepts(accepts);
-                        var parameter = {};
-                        module.parameter = syntax;
-                        translateParameter(
-                            syntax,
-                            template,
-                            "callee.argument",
-                            child.getAttribute("as") || "argument"
-                        );
-                    } else if (child.getAttribute("exports")) {
-                        var name = child.getAttribute("exports");
-                        var as = child.getAttribute("as");
-                        template.exportNames[name] = as;
-                    }
-                    // ...
-                }
-            }
-            child = child.nextSibling;
-        }
-    }
-}
-
-function getAs(node) {
-    var href = node.getAttribute("href");
-    var as = node.getAttribute("as");
-    if (!as) {
-        var match = /([^\/]+)$/.exec(href);
-        as = match[1];
-        as = as.replace(/(?:\.html|\.xml)$/, '');
-    }
-    return as.toUpperCase();
-}
-
-function analyzeElement(element, program, template, module) {
-    var child = element.firstChild;
-    while (child) {
-        if (child.nodeType === 1 /* ELEMENT_NODE */) {
-            var href = element.getAttribute("href");
-            if (href != null && href !== "") {
-                module.dependencies.push(href);
-            }
-            // TODO src for resources
-            analyzeElement(child, program, template, module);
-        }
-        child = child.nextSibling;
-    }
-}
-
+// Visits the <html> tag of a component.
+// Generates either an alias component (if <link rel="exports">),
+// or a constructor component, using the <body>.
+//
+// A <link rel="exports"> component has a pure JavaScript implementation.
+// The HTML module serves only to determine the calling convention, using
+// <meta accepts>.
+//
+// calls:
+// - tranlsateBody
+// called by:
+// - translateModule
 function translateDocument(document, program, template, module, name, displayName) {
     if (template.exports) {
         program.add("module.exports = (require)(" + JSON.stringify(template.exports) + ");\n");
     } else {
+        program.add("module.exports = " + displayName + ";\n");
         var child = document.documentElement.firstChild;
         while (child) {
             if (child.nodeType === 1 /* ELEMENT_NODE */) {
@@ -185,14 +76,26 @@ function translateDocument(document, program, template, module, name, displayNam
             }
             child = child.nextSibling;
         }
-        program.add("module.exports = $THIS;\n");
     }
 }
 
+// Visits the <body> tag of a component.
+// Generates the trappings around the component constructor,
+// including its prototype and parent prototype if specified with <link
+// rel="extends".
+// Generates the boilerplate to establish the document and root lexical scope
+// for instances of the component.
+// Uses translateComponentBody to translate the children of the body.
+//
+// calls:
+// - translateComponentBody
+// called by:
+// - translateDocument
 function translateBody(body, program, template, name, displayName) {
-    program.add("var $" + name + " = function " + displayName + "(body, caller) {\n");
+    program.add("function " + displayName + "(body, caller) {\n");
     var bodyProgram = program.indent();
-    program.add("};\n");
+    program.add("}\n");
+    program.add("var $THIS = " + displayName + "\n");
 
     // Trailing inheritance declarations
     if (template.extends) {
@@ -220,14 +123,13 @@ function translateBody(body, program, template, name, displayName) {
     scope.namespace = null;
 
     // Build out the body
-    translateSegment(
+    translateComponentBody(
         body,
         bodyProgram.addSection("segment"),
         scope,
         template,
         name,
-        displayName,
-        false
+        displayName
     );
 
     // Note "this" in scope.
@@ -235,24 +137,16 @@ function translateBody(body, program, template, name, displayName) {
     bodyProgram.add("this.scope.hookup(\"this\", this);\n");
 }
 
-function translateArgument(node, program, scope, template, name, displayName) {
-    var scope; // TODO
-    program.add("var $" + name + " = function " + displayName + "(body, caller) {\n");
-    var argumentProgram = program.indent();
-    argumentProgram.add("var document = body.ownerDocument;\n");
-    argumentProgram.add("var scope = this.scope = caller;\n");
-    translateSegment(
-        node,
-        argumentProgram.addSection("segment"),
-        scope,
-        template,
-        name,
-        displayName
-    );
-    program.add("};\n");
-}
-
-function translateSegment(node, program, scope, template, name, displayName) {
+// Generates the body of a component constructor function, for both
+// the exported component function, and the component functions for any arguments
+// passed by the component.
+//
+// calls:
+// - translateFragment
+// called by:
+// - translateBody
+// - translateArgumentBody
+function translateComponentBody(node, program, scope, template, name, displayName) {
     var header = program.add("var parent = body, parents = [], node, component, callee, argument;\n");
     var unused = translateFragment(
         node,
@@ -267,6 +161,22 @@ function translateSegment(node, program, scope, template, name, displayName) {
     }
 }
 
+// translateFragment visits the children of a component DOM fragment and
+// generates the JavaScript that will build a DOM using either elements or text
+// nodes.
+// translateFragment delegates to translateElement to either interpret DOM
+// elements literally or as linked components (<link rel="tag">).
+// Returns whether the fragment generated any code, so the caller can elide the
+// fragment and its wrapping entirely.
+//
+// The <body> of a component constructor contains a fragment, as well as every
+// argument body and and every literal element contains a fragment.
+//
+// calls:
+// - translateElement
+// called by:
+// - translateComponentBody
+// - translateElement (inside or outside of an <sp> tag)
 function translateFragment(node, program, scope, template, name, displayName) {
     var child = node.firstChild;
     var text;
@@ -299,10 +209,21 @@ function translateFragment(node, program, scope, template, name, displayName) {
     return unused;
 }
 
+// translateElement takes a component DOM element and translates it into
+// the equivalent JavaScript function that would emit that element, or
+// instantiate a linked component in its place.
+//
+// calls:
+// - translateFragment
+// - translateArgument
+// called by:
+// - translateFragment
 function translateElement(node, program, caller, template, name, displayName) {
     var id = node.getAttribute("id");
     var tagName = node.tagName.toUpperCase();
     var argumentTag = template.getTag(tagName);
+
+    program.add("// " + tagName + " " + id + "\n");
 
     var callee = caller.nest();
     callee.namespace = node.getAttribute("xmlns") || caller.namespace;
@@ -334,7 +255,7 @@ function translateElement(node, program, caller, template, name, displayName) {
 
     var component;
     if (argumentTag && argumentTag.module.parameter) {
-        constructArgument(
+        translateComponent(
             node,
             argumentTag,
             argumentTag.module.parameter,
@@ -348,12 +269,14 @@ function translateElement(node, program, caller, template, name, displayName) {
         program.add("component = node.actualNode;\n");
     }
 
+    translateAttributes(node, id, template, program);
+
     // Introduce new component or node to its owner.
     if (id) {
         program.add("scope.hookup(" + JSON.stringify(id) + ", component);\n");
     }
 
-    translateAttributes(node, id, template, program);
+    program.add("// /" + tagName + " " + id + "\n");
 
     if (!argumentTag) {
         program.push();
@@ -369,6 +292,26 @@ function translateElement(node, program, caller, template, name, displayName) {
     }
 }
 
+// translateAttributes takes DOM attributes and generates the corresponding
+// JavaScript setAttribute calls, as well as linkage for the special "id" and
+// "for" attributes.
+//
+// "id" attributes from the component DOM are translated to unique ID
+// attributes for the instantiated DOM. These identifiers apply to both
+// elements and components.
+//
+// "for" attributes are references to the identifier of another instance
+// in scope. For example <label for="foo"> will link to <input id="foo">.
+// To preserve this behavior for idiomatic HTML, this function translates the
+// "for" identifier to the unique identifier of the corresponding component in
+// scope.
+//
+// Regardless, the linkage between elements and components both use
+// the "setAttribute" method, if present, so a component can override the
+// behavior for any attribute.
+//
+// called by:
+// -  translateElement
 function translateAttributes(node, id, template, program) {
     for (var attribute, key, value, index = 0, attributes = node.attributes, length = attributes.length; index < length; index++) {
         attribute = attributes.item(index);
@@ -384,7 +327,7 @@ function translateAttributes(node, id, template, program) {
             program.add("}\n");
             // If a label precedes the element it refers to
             program.add("if (scope.componentsFor[" + JSON.stringify(value) + "]) {\n");
-            program.add("   scope.componentsFor[" + JSON.stringify(value) + "].setAttribute(\"for\", " + JSON.stringify(uid) + ")\n");
+            program.add("    scope.componentsFor[" + JSON.stringify(value) + "].setAttribute(\"for\", " + JSON.stringify(uid) + ")\n");
             program.add("}\n");
         } else if (key === "for") {
             // When the identified component will be declared after the label
@@ -395,21 +338,39 @@ function translateAttributes(node, id, template, program) {
             program.add("}\n");
         } else {
             program.add("if (component.setAttribute) {\n");
-            program.add("component.setAttribute(" + JSON.stringify(key) + ", " + JSON.stringify(value) + ");\n");
+            program.add("    component.setAttribute(" + JSON.stringify(key) + ", " + JSON.stringify(value) + ");\n");
             program.add("}\n");
         }
     }
 }
 
-function constructArgument(node, argument, parameter, program, scope, template, name, displayName) {
+// translateComponent transforms the DOM body of an linked component into the
+// argument object that the linked component accepts.
+// This involves negotiating between the DOM body provided by the caller and
+// the formal parameters of the callee component's <meta accepts> clause.
+//
+// translateComponent delegates to the recursive translateArgument
+// for the heavy lifting, and generates the additional JavaScript for the calling
+// component to kick off the calling convention.
+//
+// Components can either be internal or external, with slightly different
+// generated code. External components come from a <link rel="tag">.
+// Internal components come from arguments <meta accepts>, or the special
+// <this> or <super> tags.
+//
+// called by:
+// - translateElement
+// calls:
+// - translateArgument
+function translateComponent(node, argument, parameter, program, scope, template, name, displayName) {
     program.push();
     var argumentProgram = program.indent(node.tagName);
     program.pop();
     program = argumentProgram;
 
-    negotiateArgument(node, parameter, program, scope, template, name, displayName);
+    translateArgument(node, parameter, program, scope, template, name, displayName);
 
-    // Pass the scope back to the caller
+    // Pass the scope back to the caller.
     var name;
     var id = node.getAttribute("id");
     if (argument.type === "argument") {
@@ -434,51 +395,118 @@ function constructArgument(node, argument, parameter, program, scope, template, 
 
 }
 
-function Template() {
-    this.tags = {};
-    this.attributes = {};
-    this.exportNames = {};
-    this.nextArgumentIndex = 0;
+// translateArgument negotiates the formal parameters of the called component
+// with the passed argument of the callee component, generating the data
+// structure that the callee requests with the DOM fragment the caller
+// provides.
+//
+// calls:
+// - translateArgumentBody (for both body and entries variants)
+// - translateArgumentOption (which recurses)
+// called by:
+// - translateComponent
+function translateArgument(node, parameter, program, scope, template, name, displayName) {
+    program.add("node = {tagName: " + JSON.stringify(node.tagName.toLowerCase()) + "};\n");
+    // accepts="x y z"
+    if (parameter.type === "options") {
+        program.add("node.children = {};\n");
+        var child = node.firstChild;
+        while (child) {
+            if (child.nodeType === 1) {
+                translateArgumentOption(child, parameter, program, scope, template, name, displayName);
+            }
+            child = child.nextSibling;
+        }
+    // accepts="[entries]"
+    } else if (parameter.type === "entries") {
+        program.add("node.children = {};\n");
+        var child = node.firstChild;
+        while (child) {
+            if (child.nodeType === 1) {
+                var argumentName = translateArgumentBody(template, child, program, scope, name, displayName);
+                program.add("node.children[" + JSON.stringify(child.tagName.toLowerCase()) + "] = $" + argumentName + ";\n");
+            }
+            child = child.nextSibling;
+        }
+    // accepts="[text]"
+    } else if (parameter.type === "text") {
+        program.add("node.innerText = " + JSON.stringify(innerText(node)) + ";\n");
+    // accepts="[html]"
+    } else if (parameter.type === "html") {
+        program.add("node.innerHTML = " + JSON.stringify(node.innerHTML) + ";\n");
+    // accepts="[body]"
+    } else { // if (parameter.type === "body") { // or may be undefined
+        var argumentName = translateArgumentBody(template, node, program, scope, name, displayName);
+        program.add("node.component = $" + argumentName + ";\n");
+    }
 }
 
-Template.prototype.addTag = function (name, tag) {
-    this.tags[name] = tag;
-};
-
-Template.prototype.hasTag = function (name) {
-    return Object.prototype.hasOwnProperty.call(this.tags, name);
-};
-
-Template.prototype.getTag = function (name) {
-    return this.tags[name];
-};
-
-Template.prototype.addAttribute = function (name, attribute) {
-    this.attributes[name] = attribute;
-};
-
-Template.prototype.hasAttribute = function (name) {
-    return Object.prototype.hasOwnProperty.call(this.attributes, name);
-};
-
-Template.prototype.getAttribute = function (name) {
-    return this.attributes[name];
-};
-
-Template.prototype.defineComponent =
-function defineComponent(node, program, scope, name, displayName) {
-    var argumentProgram = program.ownerDocument.documentElement.addSection("argument");
-    var argumentSuffix = "$" + (this.nextArgumentIndex++);
-    var argumentName = name + argumentSuffix;
-    var argumentDisplayName = displayName + argumentSuffix;
+// tranlsateArgumentOption builds out an object with all the optional tags provided in the caller DOM.
+// The shape of each option gets populated recursively by calling back up to translateArgument.
+// In practice, options are shallow and each option is equivalent to a named <meta accepts=[body]>.
+//
+// calls:
+// - translateArgument (recursive)
+// called by:
+// - translateArgument
+//   - for each body in [options]
+function translateArgumentOption(child, parameter, program, scope, template, name, displayName) {
+    program.push();
+    var childProgram = program.indent(child.tagName);
+    var tagName = child.tagName.toLowerCase();
+    var quotedTagName = JSON.stringify(tagName);
+    var option = parameter.options[tagName];
     translateArgument(
-        node,
-        argumentProgram.addSection("argument"),
+        child,
+        option,
+        childProgram,
         scope,
-        this,
-        argumentName,
-        argumentDisplayName
+        template,
+        name,
+        displayName
     );
-    return argumentName;
+    if (option.plural) {
+        childProgram.add("parent.children[" + quotedTagName + "] = parent.children[" + quotedTagName + "] || [];\n");
+        childProgram.add("parent.children[" + quotedTagName + "].push(node);\n");
+    } else {
+        childProgram.add("parent.children[" + quotedTagName + "] = node;\n");
+    }
+    program.pop();
 }
 
+// translateArgumentBody creates a component constructor function for the body
+// of a parameter.
+//
+// translateArgumentBody creates all the outer boilerplate for a component
+// constructor function and delegates recursively to translateComponentBody
+// to fill in the details for the argument component DOM fragment.
+//
+// called by:
+// - translateArgument
+//   - for [body]
+//   - for each body in [entries]
+// calls:
+// - translateComponentBody (recurse)
+function translateArgumentBody(template, node, program, scope, name, displayName) {
+    var suffix = template.nextArgumentSuffix();
+
+    program = program.ownerDocument.documentElement.addSection("argument");
+    name = name + suffix;
+    displayName = displayName + suffix;
+
+    program.add("var $" + name + " = function " + displayName + "(body, caller) {\n");
+    var argumentProgram = program.indent();
+    argumentProgram.add("var document = body.ownerDocument;\n");
+    argumentProgram.add("var scope = this.scope = caller;\n");
+    translateComponentBody(
+        node,
+        argumentProgram.addSection("segment"),
+        scope,
+        template,
+        name,
+        displayName
+    );
+    program.add("};\n");
+
+    return name;
+}
